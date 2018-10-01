@@ -1,5 +1,5 @@
 <?php
-include '../../lib/DBController.php';
+include_once '../../lib/DBController.php';
 
 /**
 * zz的校车查询模块控制类
