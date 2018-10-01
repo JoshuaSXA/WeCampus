@@ -1,5 +1,5 @@
 <?php
-include 'DBController.php';
+include '../../lib/DBController.php';
 
 /**
 * zz的校车查询模块控制类
@@ -85,7 +85,7 @@ class TransController
 
 	// 初始化根据用户的gps获取站点信息获取距离最近的站点信息
 	public function getBusStationInfoByLocation(){
-		$this->schoolID = $_GET['good_id'];
+		$this->schoolID = $_GET['school_id'];
 		$this->longitude = $_GET['longitude'];
 		$this->latitude = $_GET['latitude'];
 
@@ -127,7 +127,7 @@ class TransController
 
 
 	// 根据station_id来获取从该station出发的所有的路线
-	public function getBusStationCardInfo(){
+	public function getRouteInfoByTime(){
 		$this->stationID = $_GET['station_id'];
 		$this->curDate = $_GET['cur_date'];
 		$this->curTime = $_GET['cur_time'];
@@ -173,7 +173,7 @@ class TransController
 
 
 	// 用来获取二级页面的车站信息
-	public function getBusStationDetailByID(){
+	public function getRouteDetailByID(){
 		$this->stationID = $_GET['station_id'];
 		$this->routeID = $_GET['route_id'];
 		$this->patternID = $_GET['pattern_id'];
