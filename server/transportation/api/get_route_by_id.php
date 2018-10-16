@@ -14,6 +14,6 @@ include_once '../class/TransController.php';
 $transControllerObj = new TransController();
 
 // 调用getBusStationInfoByID()方法
-$transControllerObj->getBusStationInfoByID();
+$transControllerObj->getRouteInfoByID();
 
 ?>

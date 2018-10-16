@@ -13,7 +13,7 @@ include_once '../class/TransController.php';
 // 实例化TransController类
 $transControllerObj = new TransController();
 
-// 调用getBusStationInfoByLocation()方法
-$transControllerObj->getBusStationInfoByLocation();
+// 调用getBusStationInfo()方法
+$transControllerObj->getBusStationInfo();
 
 ?>

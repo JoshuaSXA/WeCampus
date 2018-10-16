@@ -88,10 +88,15 @@ class TokenController
 
 	// 外部调用接口
 	public function getAccessToken() {
+		/*
+		if(!$this->accessTokenStatus) {
 
+			$this->checkAccessTokenStatus();
+
+		}
+		*/
 		// 直接返回access_token
 		return $this->accessToken;
-
 	}
 
 }

@@ -42,30 +42,65 @@ class TransController
 		$this->DBController->connDatabase();
 	}
 
-
-	// 初始化若没有获得用户的gps信息，则根据学校返回所有站点的信息
-	public function getBusStationInfoByID(){
+	/******************************************
+	 * 初始化获取学校的站点信息，这里分两种情况
+	 * 1. 用户未授权位置信息，此时返回默认的站点信息
+	 * 2. 用户授权获取位置信息，此时通过计算距离来返回站点信息
+	 *****************************************/
+	public function getBusStationInfo() {
 
 		$this->schoolID = $_GET['school_id'];
+		$this->longitude = $_GET['longitude'];
+		$this->latitude = $_GET['latitude'];
 
-		$sql = "SELECT station_id, station_name FROM station WHERE school_id = ?";
+		// 初始化一个sql变量
+		$sql = '';
 
-		// 创建预处理语句
+		// tag，标志是否能获得用户的GPS信息
+		$gpsAccess = FALSE;
+
+		// 判断gps信息
+		if((float)$this->longitude != 0 && (float)$this->latitude != 0) {
+
+			$gpsAccess = TRUE;
+
+			// 按照经纬度计算距离，并排序
+			$sql = "SELECT station_id, station_name, 
+					ROUND(6378.138*2*ASIN(SQRT(POW(SIN(((?)*PI()/180-latitude*PI()/180)/2),2)+COS((?)*PI()/180)*COS(latitude*PI()/180)*POW(SIN(((?)*PI()/180-longitude*PI()/180)/2),2)))*1000) AS distance 
+					FROM station WHERE school_id = (?) ORDER BY distance ASC)";
+
+		} else {
+
+			// sql选择对应学校id的所有站点信息
+			$sql = "SELECT station_id, station_name FROM station WHERE school_id = (?)";
+		}
+
+	    // 创建预处理语句
 		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
+        
 
-		if(mysqli_stmt_prepare($stmt, $sql)){
+        if(mysqli_stmt_prepare($stmt, $sql)){
 
 			// 绑定参数
-			mysqli_stmt_bind_param($stmt, "i", $this->schoolID);
+			if($gpsAccess) {
+
+				mysqli_stmt_bind_param($stmt, "dddi", $this->latitude, $this->latitude, $this->longitude, $this->schoolID);   
+
+			} else {
+
+				mysqli_stmt_bind_param($stmt, "i", $this->schoolID);
+
+			}
+			   
 
 			// 执行查询
 			mysqli_stmt_execute($stmt);
 
 			// 获取查询结果
-			$result = mysqli_stmt_get_result($stmt);
+			$result = mysqli_stmt_get_result($stmt);  
 
 			// 获取值
-			$retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);
+			$retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);   
 
 			// 返回结果
 			echo json_encode($retValue, JSON_UNESCAPED_UNICODE);
@@ -74,14 +109,16 @@ class TransController
 			mysqli_stmt_free_result($stmt);
 
 			// 关闭mysqli_stmt类
-			mysqli_stmt_close($stmt);
-
-		}
+			mysqli_stmt_close($stmt);	
+			}
+        }
 
 		// 断开与数据库的连接
 		$this->DBController->disConnDatabase();
+
 	}
 
+/*
 
 	// 初始化根据用户的gps获取站点信息获取距离最近的站点信息
 	public function getBusStationInfoByLocation(){
@@ -92,7 +129,7 @@ class TransController
 		// 按照经纬度计算距离，并排序
 		$sql = "SELECT station_id, station_name, 
 				ROUND(6378.138*2*ASIN(SQRT(POW(SIN(((?)*PI()/180-latitude*PI()/180)/2),2)+COS((?)*PI()/180)*COS(latitude*PI()/180)*POW(SIN(((?)*PI()/180-longitude*PI()/180)/2),2)))*1000) AS distance 
-				FROM station WHERE school_id = ? ORDER BY distance ASC";
+				FROM station WHERE school_id = (?) ORDER BY distance ASC)";
 
 	    // 创建预处理语句
 		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
@@ -123,6 +160,57 @@ class TransController
 
 		// 断开与数据库的连接
 		$this->DBController->disConnDatabase();
+
+	}
+
+*/
+
+	// 则根据车站的id返回从该车站出发的所有路线信息所有的路线信息
+	public function getRouteInfoByID(){
+
+		//$this->schoolID = $_GET['school_id'];
+		$this->stationID = $_GET['station_id'];
+		$this->curDate = $_GET['cur_date'];
+		$this->curTime = $_GET['cur_time'];
+
+		$sql = "SELECT route_id, route_name, end_station, time FROM 
+		       (SELECT route_id, pattern_id FROM date_pattern WHERE from_data <= (?) AND (?) <= to_date AND station_id = (?)) 
+		       NATURAL JOIN 
+		       (SELECT * FROM route WHERE NOT end_station = (?)) 
+		       NATURAL JOIN 
+		       (SELECT * FROM schedule WHERE time >= (?)) 
+		       ORDER BY time ASC LIMIT 1";
+
+		// 创建预处理语句
+		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
+
+		if(mysqli_stmt_prepare($stmt, $sql)){
+
+			// 绑定参数
+			mysqli_stmt_bind_param($stmt, "isss", $this->schoolID, $this->curDate, $this->curDate, $this->curTime);
+
+			// 执行查询
+			mysqli_stmt_execute($stmt);
+
+			// 获取查询结果
+			$result = mysqli_stmt_get_result($stmt);
+
+			// 获取值
+			$retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);
+
+			// 返回结果
+			echo json_encode($retValue, JSON_UNESCAPED_UNICODE);
+
+			// 释放结果
+			mysqli_stmt_free_result($stmt);
+
+			// 关闭mysqli_stmt类
+			mysqli_stmt_close($stmt);
+
+		}
+
+		// 断开与数据库的连接
+		$this->DBController->disConnDatabase();
 	}
 
 
@@ -136,9 +224,11 @@ class TransController
 		$sql = "SELECT * FROM 
 		        (SELECT route_id, pattern_id FROM date_pattern WHERE from_data <= (?) AND (?) <= to_date AND station_id = (?)) 
 		        INNER JOIN 
-		        (SELECT route_id, end_station FROM route NATURAL JOIN stop WHERE station_id = (?) AND NOT end_station = (?)) 
+		        (SELECT route_id, route_name, end_station FROM route NATURAL JOIN station_pos WHERE station_id = (?) AND NOT end_station = (?)) 
 		        NATURAL JOIN 
 		        (SELECT * FROM schedule WHERE time >= (?)) ORDER BY time ASC";
+
+
 
 	    // 创建预处理语句
 		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
@@ -181,6 +271,7 @@ class TransController
 
 		$schedule = NULL;
 		$routeInfo = NULL;
+
 		/**************************************************************
 		 * 先获取此线路的完整时刻表信息，然后获取车站信息包括停靠站点、经纬度信息
 		 * 这里需要使用多SQL查询     过程化风格
@@ -241,6 +332,60 @@ class TransController
 
 			// 绑定参数
 			mysqli_stmt_bind_param($stmt, "ss", $systemDate, $$nextMonthLastDay);   
+
+			// 执行查询
+			mysqli_stmt_execute($stmt);
+
+			// 获取查询结果
+			$result = mysqli_stmt_get_result($stmt);  
+
+			// 获取值
+			$retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);   
+
+			// 返回结果
+			echo json_encode($retValue, JSON_UNESCAPED_UNICODE);
+
+			// 释放结果
+			mysqli_stmt_free_result($stmt);
+
+			// 关闭mysqli_stmt类
+			mysqli_stmt_close($stmt);	
+        }		
+
+		// 断开与数据库的连接
+		$this->DBController->disConnDatabase();
+
+	}
+
+
+
+	// 消息反馈功能，接收=用户反馈信息，插入到数据库
+	public function getUserFeedback() {
+
+		// 获取POST字段信息
+		$openID = $_POST['open_id'];
+		$formID = $_POST['form_id'];
+		$email = $_POST['email'];
+
+		$stopName = $_POST['stop_name'];
+		$routeName = $_POST['route_name'];
+		$endStationName = $_POST['end_station_name'];
+
+		$curDate = $_POST['cur_date'];
+		$time = $_POST['time'];
+		
+		$feedback = $_POST['feedback'];
+		
+		// 将信息插入到数据库
+		$sql = "INSERT INTO feedback (open_id, form_id, email, stop_name, route_name, end_station_name, cur_date, time, feedback) VALUES((?), (?), (?), (?), (?), (?), (?), (?), (?))";
+
+		// 创建预处理语句
+		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
+        
+        if(mysqli_stmt_prepare($stmt, $sql)){
+
+			// 绑定参数
+			mysqli_stmt_bind_param($stmt, "sssssssss", $openID, $formID, $email, $stopName, $routeName, $endStationName, $curDate, $time, $feedback);   
 
 			// 执行查询
 			mysqli_stmt_execute($stmt);
