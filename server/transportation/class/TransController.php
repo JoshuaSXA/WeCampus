@@ -40,6 +40,20 @@ class TransController
 	{
 		$this->DBController = new DBController();
 		$this->DBController->connDatabase();
+
+
+		// 首先获取header中的内容
+		$headers = apache_request_headers();
+
+		/* 提取header中的相应字段 */
+
+		// 提取school_id字段的内容
+		if(array_key_exists('school_id', $headers)) {
+
+			$this->schoolID = $headers['school_id'];
+
+		}
+		
 	}
 
 	/******************************************
@@ -49,7 +63,7 @@ class TransController
 	 *****************************************/
 	public function getBusStationInfo() {
 
-		$this->schoolID = $_GET['school_id'];
+		//$this->schoolID = $_GET['school_id'];
 		$this->longitude = $_GET['longitude'];
 		$this->latitude = $_GET['latitude'];
 
@@ -173,8 +187,8 @@ class TransController
 		$this->curDate = $_GET['cur_date'];
 		$this->curTime = $_GET['cur_time'];
 
-		$sql = "SELECT route_id, route_name, end_station, time FROM 
-		       (SELECT route_id, pattern_id FROM date_pattern WHERE from_data <= (?) AND (?) <= to_date AND station_id = (?)) 
+		$sql = "SELECT 1 AS type, route_id, route_name, end_station, time FROM 
+		       (SELECT route_id, pattern_id FROM date_pattern WHERE from_date <= (?) AND (?) <= to_date AND station_id = (?)) 
 		       NATURAL JOIN 
 		       (SELECT * FROM route WHERE NOT end_station = (?)) 
 		       NATURAL JOIN 
@@ -213,7 +227,7 @@ class TransController
 		$this->DBController->disConnDatabase();
 	}
 
-
+/*
 	// 根据station_id来获取从该station出发的所有的路线
 	public function getRouteInfoByTime(){
 		$this->stationID = $_GET['station_id'];
@@ -260,6 +274,74 @@ class TransController
 		// 断开与数据库的连接
 		$this->DBController->disConnDatabase();
 	}
+*/
+
+	// 获取其余各种卡片信息
+	public function getTipCardInfo() {
+
+		// 获取其余卡片信息
+		$sql = "SELECT card_id, position, type, title, content, copyboard FROM card WHERE school_id = (?) ORDER BY position ASC";
+
+	    // 创建预处理语句
+		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
+        
+        if(mysqli_stmt_prepare($stmt, $sql)){
+
+			// 绑定参数
+			mysqli_stmt_bind_param($stmt, "i", $this->schoolID);   
+
+			// 执行查询
+			mysqli_stmt_execute($stmt);
+
+			// 获取查询结果
+			$result = mysqli_stmt_get_result($stmt);  
+
+
+			// 存储返回的结果
+			$retValue = array(); 
+
+			// 逐行读取数据
+			while($row = mysqli_fetch_array($result, MYSQLI_ASSOC)) {
+
+				if($row['type'] == 2) {
+					// 此时为消息卡片
+
+					array_splice($row, 'copyboard', 1);
+
+				} elseif ($row['type'] == 4 ) {
+					// 此时为广告卡片
+
+					$tempArray = array('unitID' => $row['content']);
+
+					array_splice($row, 'copyboard', 1);
+
+					array_splice($row, 'title', 1);
+
+					array_splice($row, 'content', 1, $tempArray);
+
+				}
+
+				array_push($retValue, $row);
+
+			}   
+
+			// 返回结果
+			echo json_encode($retValue, JSON_UNESCAPED_UNICODE);
+
+			// 释放结果
+			mysqli_stmt_free_result($stmt);
+
+			// 关闭mysqli_stmt类
+			mysqli_stmt_close($stmt);	
+        }		
+
+		// 断开与数据库的连接
+		$this->DBController->disConnDatabase();
+
+	}
+
+
+
 
 
 	// 用来获取二级页面的车站信息
@@ -315,7 +397,7 @@ class TransController
 
 	// 获取某一学校一定时间范围内的特殊日子
 	public function getSpecialDateByID(){
-		$this->schoolID = $_GET['school_id'];
+		//$this->schoolID = $_GET['school_id'];
 
 		// 获取系统的当前日期
 		$systemDate = date('Y-m-d');
