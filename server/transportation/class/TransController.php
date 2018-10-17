@@ -1,5 +1,6 @@
 <?php
 include_once '../../lib/DBController.php';
+include_once '../../lib/GlobalVar.php';
 
 /**
 * zz的校车查询模块控制类
@@ -79,14 +80,14 @@ class TransController
 			$gpsAccess = TRUE;
 
 			// 按照经纬度计算距离，并排序
-			$sql = "SELECT station_id, station_name, 
+			$sql = "SELECT station_id AS value, station_name AS label, 
 					ROUND(6378.138*2*ASIN(SQRT(POW(SIN(((?)*PI()/180-latitude*PI()/180)/2),2)+COS((?)*PI()/180)*COS(latitude*PI()/180)*POW(SIN(((?)*PI()/180-longitude*PI()/180)/2),2)))*1000) AS distance 
-					FROM station WHERE school_id = (?) ORDER BY distance ASC)";
+					FROM station WHERE school_id = (?) ORDER BY distance ASC";
 
 		} else {
 
 			// sql选择对应学校id的所有站点信息
-			$sql = "SELECT station_id, station_name FROM station WHERE school_id = (?)";
+			$sql = "SELECT station_id AS value, station_name AS label FROM station WHERE school_id = (?)";
 		}
 
 	    // 创建预处理语句
@@ -124,7 +125,11 @@ class TransController
 
 			// 关闭mysqli_stmt类
 			mysqli_stmt_close($stmt);	
-			}
+	
+        } else {
+
+        	echo $this->DBController->getErrorCode();
+
         }
 
 		// 断开与数据库的连接
@@ -187,13 +192,12 @@ class TransController
 		$this->curDate = $_GET['cur_date'];
 		$this->curTime = $_GET['cur_time'];
 
-		$sql = "SELECT 1 AS type, route_id, route_name, end_station, time FROM 
-		       (SELECT route_id, pattern_id FROM date_pattern WHERE from_date <= (?) AND (?) <= to_date AND station_id = (?)) 
+		$sql = "SELECT 1 AS card, route_id AS routeID, route_name AS name, end_station AS boundForID, time AS dept_time, pattern_id FROM 
+		       ((SELECT route_id, pattern_id FROM date_pattern WHERE from_date <= (?) AND (?) <= to_date AND station_id = (?)) AS A 
 		       NATURAL JOIN 
-		       (SELECT * FROM route WHERE NOT end_station = (?)) 
+		       (SELECT * FROM route WHERE end_station <> (?)) AS B 
 		       NATURAL JOIN 
-		       (SELECT * FROM schedule WHERE time >= (?)) 
-		       ORDER BY time ASC LIMIT 1";
+		       (SELECT pattern_id, MIN(time) AS time FROM schedule WHERE time >= (?) GROUP BY pattern_id) AS C)";
 
 		// 创建预处理语句
 		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
@@ -201,7 +205,7 @@ class TransController
 		if(mysqli_stmt_prepare($stmt, $sql)){
 
 			// 绑定参数
-			mysqli_stmt_bind_param($stmt, "isss", $this->schoolID, $this->curDate, $this->curDate, $this->curTime);
+			mysqli_stmt_bind_param($stmt, "ssiis", $this->curDate, $this->curDate, $this->stationID, $this->stationID, $this->curTime);
 
 			// 执行查询
 			mysqli_stmt_execute($stmt);
@@ -221,7 +225,11 @@ class TransController
 			// 关闭mysqli_stmt类
 			mysqli_stmt_close($stmt);
 
-		}
+		} else {
+
+        	echo $this->DBController->getErrorCode();
+
+        }
 
 		// 断开与数据库的连接
 		$this->DBController->disConnDatabase();
@@ -280,7 +288,7 @@ class TransController
 	public function getTipCardInfo() {
 
 		// 获取其余卡片信息
-		$sql = "SELECT card_id, position, type, title, content, copyboard FROM card WHERE school_id = (?) ORDER BY position ASC";
+		$sql = "SELECT card_id, position, type AS card, title, content, copyboard FROM card WHERE school_id = (?) ORDER BY position ASC";
 
 	    // 创建预处理语句
 		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
@@ -303,21 +311,21 @@ class TransController
 			// 逐行读取数据
 			while($row = mysqli_fetch_array($result, MYSQLI_ASSOC)) {
 
-				if($row['type'] == 2) {
+				if($row['card'] == 2) {
 					// 此时为消息卡片
 
-					array_splice($row, 'copyboard', 1);
+					arrayRemove($row, 'copyboard');
 
-				} elseif ($row['type'] == 4 ) {
+				} elseif ($row['card'] == 4 ) {
 					// 此时为广告卡片
 
-					$tempArray = array('unitID' => $row['content']);
+					$row['unitID'] = $row['content'];
 
-					array_splice($row, 'copyboard', 1);
+					arrayRemove($row, 'copyboard');
 
-					array_splice($row, 'title', 1);
+					arrayRemove($row, 'title');
 
-					array_splice($row, 'content', 1, $tempArray);
+					arrayRemove($row, 'content');
 
 				}
 
@@ -333,7 +341,12 @@ class TransController
 
 			// 关闭mysqli_stmt类
 			mysqli_stmt_close($stmt);	
-        }		
+
+        } else {
+
+        	echo $this->DBController->getErrorCode();
+
+        }	
 
 		// 断开与数据库的连接
 		$this->DBController->disConnDatabase();
@@ -360,10 +373,10 @@ class TransController
 		 **************************************************************/
 
 		// 第一条SQL实现时刻表查询
-		$sql = "SELECT time FROM schedule WHERE pattern_id = ' . $this->patternID . ' ORDER BY time ASC;" 
-			
+		$sql = 'SELECT time FROM schedule WHERE pattern_id = ' . $this->patternID . ' ORDER BY time ASC;';	
+
 		// 第二条SQL实现停靠站点和GPS信息查询	
-		$sql .=	"SELECT station_id, stop_name, longitude, latitude FROM stop WHERE station_id = ' . $this->stationID . ' AND route_id = ' . $this->routeID . ' ORDER BY position ASC";
+		$sql .=	'SELECT stop_name AS location, longitude AS GPSy, latitude AS GPSx, warning FROM stop WHERE station_id = ' . $this->stationID . ' AND route_id = ' . $this->routeID;
 
 		if(mysqli_multi_query($this->DBController->getConnObject(), $sql)) {
 
@@ -371,17 +384,30 @@ class TransController
 
 				if($result = mysqli_store_result($this->DBController->getConnObject())){
 					if($schedule == NULL){
-						$schedule = mysqli_fetch_all($result, MYSQLI_ASSOC);
+
+						$schedule = array();
+
+						// 逐行将时间信息插入到数组中
+						while ($row = mysqli_fetch_assoc($result)) {
+
+                			array_push($schedule, $row['time']);
+
+            			}
+
 					}else{
+
 						$routeInfo = mysqli_fetch_all($result, MYSQLI_ASSOC);
+
 					}
+
+					mysqli_free_result($result);
 				}
 
 			} while(mysqli_next_result($this->DBController->getConnObject()));
 
 		}else{
 
-			$this->DBController->getErrorCode();
+			echo $this->DBController->getErrorCode();
 
 		}
 
@@ -432,7 +458,12 @@ class TransController
 
 			// 关闭mysqli_stmt类
 			mysqli_stmt_close($stmt);	
-        }		
+
+        } else {
+
+        	echo $this->DBController->getErrorCode();
+
+        }	
 
 		// 断开与数据库的连接
 		$this->DBController->disConnDatabase();
@@ -486,6 +517,11 @@ class TransController
 
 			// 关闭mysqli_stmt类
 			mysqli_stmt_close($stmt);	
+
+        } else {
+
+        	echo $this->DBController->getErrorCode();
+
         }		
 
 		// 断开与数据库的连接
