@@ -36,6 +36,9 @@ class TransController
 	// 当前要查询的具体时刻
 	private $curTime;
 
+	// 乘车提醒的时间间隔，这里设置为15分钟
+	//private $timeInterval = 15;
+
 	// 鸡肋构造函数
 	function __construct()
 	{
@@ -137,52 +140,6 @@ class TransController
 
 	}
 
-/*
-
-	// 初始化根据用户的gps获取站点信息获取距离最近的站点信息
-	public function getBusStationInfoByLocation(){
-		$this->schoolID = $_GET['school_id'];
-		$this->longitude = $_GET['longitude'];
-		$this->latitude = $_GET['latitude'];
-
-		// 按照经纬度计算距离，并排序
-		$sql = "SELECT station_id, station_name, 
-				ROUND(6378.138*2*ASIN(SQRT(POW(SIN(((?)*PI()/180-latitude*PI()/180)/2),2)+COS((?)*PI()/180)*COS(latitude*PI()/180)*POW(SIN(((?)*PI()/180-longitude*PI()/180)/2),2)))*1000) AS distance 
-				FROM station WHERE school_id = (?) ORDER BY distance ASC)";
-
-	    // 创建预处理语句
-		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
-        
-        if(mysqli_stmt_prepare($stmt, $sql)){
-
-			// 绑定参数
-			mysqli_stmt_bind_param($stmt, "dddi", $this->latitude, $this->latitude, $this->longitude, $this->schoolID);   
-
-			// 执行查询
-			mysqli_stmt_execute($stmt);
-
-			// 获取查询结果
-			$result = mysqli_stmt_get_result($stmt);  
-
-			// 获取值
-			$retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);   
-
-			// 返回结果
-			echo json_encode($retValue, JSON_UNESCAPED_UNICODE);
-
-			// 释放结果
-			mysqli_stmt_free_result($stmt);
-
-			// 关闭mysqli_stmt类
-			mysqli_stmt_close($stmt);	
-        }
-
-		// 断开与数据库的连接
-		$this->DBController->disConnDatabase();
-
-	}
-
-*/
 
 	// 则根据车站的id返回从该车站出发的所有路线信息所有的路线信息
 	public function getRouteInfoByID(){
@@ -235,54 +192,6 @@ class TransController
 		$this->DBController->disConnDatabase();
 	}
 
-/*
-	// 根据station_id来获取从该station出发的所有的路线
-	public function getRouteInfoByTime(){
-		$this->stationID = $_GET['station_id'];
-		$this->curDate = $_GET['cur_date'];
-		$this->curTime = $_GET['cur_time'];
-
-		// 一条及其复杂的sql语句
-		$sql = "SELECT * FROM 
-		        (SELECT route_id, pattern_id FROM date_pattern WHERE from_data <= (?) AND (?) <= to_date AND station_id = (?)) 
-		        INNER JOIN 
-		        (SELECT route_id, route_name, end_station FROM route NATURAL JOIN station_pos WHERE station_id = (?) AND NOT end_station = (?)) 
-		        NATURAL JOIN 
-		        (SELECT * FROM schedule WHERE time >= (?)) ORDER BY time ASC";
-
-
-
-	    // 创建预处理语句
-		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
-        
-        if(mysqli_stmt_prepare($stmt, $sql)){
-
-			// 绑定参数
-			mysqli_stmt_bind_param($stmt, "ssiiis", $this->curDate, $this->curDate, $this->stationID, $this->stationID, $this->stationID, $this->curTime);   
-
-			// 执行查询
-			mysqli_stmt_execute($stmt);
-
-			// 获取查询结果
-			$result = mysqli_stmt_get_result($stmt);  
-
-			// 获取值
-			$retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);   
-
-			// 返回结果
-			echo json_encode($retValue, JSON_UNESCAPED_UNICODE);
-
-			// 释放结果
-			mysqli_stmt_free_result($stmt);
-
-			// 关闭mysqli_stmt类
-			mysqli_stmt_close($stmt);	
-        }		
-
-		// 断开与数据库的连接
-		$this->DBController->disConnDatabase();
-	}
-*/
 
 	// 获取其余各种卡片信息
 	public function getTipCardInfo() {
@@ -354,9 +263,6 @@ class TransController
 	}
 
 
-
-
-
 	// 用来获取二级页面的车站信息
 	public function getRouteDetailByID(){
 		$this->stationID = $_GET['station_id'];
@@ -414,6 +320,62 @@ class TransController
 		$retVal = array('schedule' => $schedule, 'route_info' => $routeInfo);
 
 		echo json_encode($retVal,  JSON_UNESCAPED_UNICODE);
+
+		// 断开与数据库的连接
+		$this->DBController->disConnDatabase();
+
+	}
+
+
+	// 将模板消息的信息传入
+	public function addTemplateMessageInfo() {
+
+		$openID = $_REQUEST['open_id'];
+
+		$formID = $_REQUEST['form_id'];
+
+		// 这里传过来的应该是发车时间，需要转换一下
+		$time = $_REQUEST['time'];
+
+		// 提前15分钟
+		$time = date('Y-m-d H:i:s', strtotime(date('Y-m-d H:i:s', strtotime($time)).'-15 minute'));
+
+
+		// 三个关键字
+		$keyword_1 = $_REQUEST['keyword_1'];
+		$keyword_2 = $_REQUEST['keyword_2'];
+		$keyword_3 = $_REQUEST['keyword_3'];
+
+		$sql = "INSERT INTO trans_message (time, open_id, form_id, keyword_1, keyword_2, keyword_3) 
+				VALUES((?), (?), (?), (?), (?), (?))";
+
+		// 创建预处理语句
+		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
+        
+        if(mysqli_stmt_prepare($stmt, $sql)){
+
+			// 绑定参数
+			mysqli_stmt_bind_param($stmt, "ssssss", $time, $openID, $formID, $keyword_1, $keyword_2, $keyword_3);   
+
+			// 执行查询
+			mysqli_stmt_execute($stmt);
+
+			// 返回结果
+			echo json_encode(array("success" => TRUE), JSON_UNESCAPED_UNICODE);
+
+			// 释放结果
+			mysqli_stmt_free_result($stmt);
+
+			// 关闭mysqli_stmt类
+			mysqli_stmt_close($stmt);	
+
+        } else {
+
+        	// echo $this->DBController->getErrorCode();
+
+        	echo json_encode(array("success" => FALSE), JSON_UNESCAPED_UNICODE);
+        	
+        }		
 
 		// 断开与数据库的连接
 		$this->DBController->disConnDatabase();
@@ -523,11 +485,6 @@ class TransController
 		$this->DBController->disConnDatabase();
 
 	}
-
-
-
-	
-
 
 }
 
