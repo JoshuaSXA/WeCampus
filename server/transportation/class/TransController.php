@@ -192,7 +192,7 @@ class TransController
 		$this->curDate = $_GET['cur_date'];
 		$this->curTime = $_GET['cur_time'];
 
-		$sql = "SELECT 1 AS card, route_id AS routeID, route_name AS name, end_station AS boundForID, time AS dept_time, pattern_id FROM 
+		$sql = "SELECT 1 AS card, route_id AS routeID, route_name AS name, end_station AS boundForID, DATE_FORMAT(time, '%H:%i') AS dept_time, pattern_id FROM 
 		       ((SELECT route_id, pattern_id FROM date_pattern WHERE from_date <= (?) AND (?) <= to_date AND station_id = (?)) AS A 
 		       NATURAL JOIN 
 		       (SELECT * FROM route WHERE end_station <> (?)) AS B 
@@ -373,7 +373,7 @@ class TransController
 		 **************************************************************/
 
 		// 第一条SQL实现时刻表查询
-		$sql = 'SELECT time FROM schedule WHERE pattern_id = ' . $this->patternID . ' ORDER BY time ASC;';	
+		$sql = "SELECT DATE_FORMAT(time, '%H:%i') AS time FROM schedule WHERE pattern_id = " . $this->patternID . ' ORDER BY time ASC;';	
 
 		// 第二条SQL实现停靠站点和GPS信息查询	
 		$sql .=	'SELECT stop_name AS location, longitude AS GPSy, latitude AS GPSx, warning FROM stop WHERE station_id = ' . $this->stationID . ' AND route_id = ' . $this->routeID;
@@ -475,20 +475,19 @@ class TransController
 	// 消息反馈功能，接收=用户反馈信息，插入到数据库
 	public function getUserFeedback() {
 
-		// 获取POST字段信息
-		$openID = $_POST['open_id'];
-		$formID = $_POST['form_id'];
-		$email = $_POST['email'];
+		// 获取POST字段信息（卧槽真的zz，$_POST取不到数据，气死了）
 
-		$stopName = $_POST['stop_name'];
-		$routeName = $_POST['route_name'];
-		$endStationName = $_POST['end_station_name'];
+		$openID = $_REQUEST['open_id'];
+		$formID = $_REQUEST['form_id'];
+		$email = $_REQUEST['email'];
+		$stopName = $_REQUEST['stop_name'];
+		$routeName = $_REQUEST['route_name'];
+		$endStationName = $_REQUEST['end_station_name'];
+		$curDate = $_REQUEST['cur_date'];
+		$time = $_REQUEST['time'];
+		$feedback = $_REQUEST['feedback'];
+		
 
-		$curDate = $_POST['cur_date'];
-		$time = $_POST['time'];
-		
-		$feedback = $_POST['feedback'];
-		
 		// 将信息插入到数据库
 		$sql = "INSERT INTO feedback (open_id, form_id, email, stop_name, route_name, end_station_name, cur_date, time, feedback) VALUES((?), (?), (?), (?), (?), (?), (?), (?), (?))";
 
@@ -503,14 +502,8 @@ class TransController
 			// 执行查询
 			mysqli_stmt_execute($stmt);
 
-			// 获取查询结果
-			$result = mysqli_stmt_get_result($stmt);  
-
-			// 获取值
-			$retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);   
-
 			// 返回结果
-			echo json_encode($retValue, JSON_UNESCAPED_UNICODE);
+			echo json_encode(array("success" => TRUE), JSON_UNESCAPED_UNICODE);
 
 			// 释放结果
 			mysqli_stmt_free_result($stmt);
@@ -520,14 +513,20 @@ class TransController
 
         } else {
 
-        	echo $this->DBController->getErrorCode();
+        	// echo $this->DBController->getErrorCode();
 
+        	echo json_encode(array("success" => FALSE), JSON_UNESCAPED_UNICODE);
+        	
         }		
 
 		// 断开与数据库的连接
 		$this->DBController->disConnDatabase();
 
 	}
+
+
+
+	
 
 
 }
