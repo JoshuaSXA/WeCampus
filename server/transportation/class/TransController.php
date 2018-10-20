@@ -338,16 +338,21 @@ class TransController
 		$time = $_REQUEST['time'];
 
 		// 提前15分钟
-		$time = date('Y-m-d H:i:s', strtotime(date('Y-m-d H:i:s', strtotime($time)).'-15 minute'));
+		$time = date('Y-m-d H:i', strtotime(date('Y-m-d H:i', strtotime($time)).'-15 minute'));
 
+		// 用于页面跳转的
+		$stationID = $_REQUEST['station_id'];
+		$routeID = $_REQUEST['route_id'];
+		$patternID = $_REQUEST['pattern_id'];
 
 		// 三个关键字
 		$keyword_1 = $_REQUEST['keyword_1'];
 		$keyword_2 = $_REQUEST['keyword_2'];
 		$keyword_3 = $_REQUEST['keyword_3'];
+		$keyword_5 = $_REQUEST['keyword_5'];
 
-		$sql = "INSERT INTO trans_message (time, open_id, form_id, keyword_1, keyword_2, keyword_3) 
-				VALUES((?), (?), (?), (?), (?), (?))";
+		$sql = "INSERT INTO trans_message (time, open_id, form_id, station_id, route_id, pattern_id, keyword_1, keyword_2, keyword_3, keyword_5) 
+				VALUES((?), (?), (?), (?), (?), (?), (?), (?), (?), (?))";
 
 		// 创建预处理语句
 		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
@@ -355,7 +360,7 @@ class TransController
         if(mysqli_stmt_prepare($stmt, $sql)){
 
 			// 绑定参数
-			mysqli_stmt_bind_param($stmt, "ssssss", $time, $openID, $formID, $keyword_1, $keyword_2, $keyword_3);   
+			mysqli_stmt_bind_param($stmt, "sssiiissss", $time, $openID, $formID, $stationID, $routeID, $patternID, $keyword_1, $keyword_2, $keyword_3, $keyword_5);   
 
 			// 执行查询
 			mysqli_stmt_execute($stmt);
