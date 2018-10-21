@@ -13,7 +13,7 @@ $schedule = $_REQUEST['schedule'];
 
 for($i = 0; $i < count($schedule); ++$i) {
 
-	$unitTime = $schedule[i];
+	$unitTime = $schedule[$i];
 
 	$sql = "INSERT INTO schedule (pattern_id, time) VALUES($patternID, '$unitTime')";
 

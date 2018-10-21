@@ -2,6 +2,8 @@
 include_once '../../lib/DBController.php';
 include_once '../../lib/GlobalVar.php';
 
+include_once '../../lib/TemplateMessageController.php';
+
 /**
 * zz的校车查询模块控制类
 */
@@ -341,6 +343,7 @@ class TransController
 		
 		$time = date('Y-m-d H:i', strtotime(date('Y-m-d H:i', strtotime($time)).'-15 minute'));
 
+		$curTime = date('Y-m-d H:i');
 		// 用于页面跳转的
 		$stationID = $_REQUEST['station_id'];
 		$routeID = $_REQUEST['route_id'];
@@ -351,6 +354,60 @@ class TransController
 		$keyword_2 = $_REQUEST['keyword_2'];
 		$keyword_3 = $_REQUEST['keyword_3'];
 		$keyword_5 = $_REQUEST['keyword_5'];
+
+		//echo $curTime;
+
+		// 判断是否在15分钟以内，如果是则立即推送，智障需求
+		if(strtotime($time) - strtotime($curTime) <= 900) {
+			
+
+			$tempArray = explode('-', explode(' ', $time)[0]);
+			$deptDate = $tempArray[0] . "年" . $tempArray[1] . "月" . $tempArray[2] . "日";
+
+			
+
+			$page = "pages/transportation/scheduleDetail/scheduleDetail";
+
+			$page .= "?scheduleTime=" . $keyword_5;
+			$page .= "&routeName=" . $keyword_1;
+			$page .= "&deptDate=" . $deptDate;
+			$page .= "&routeID=" . $routeID;
+			$page .= "&boundFor=" . $keyword_3;
+			$page .= "&deptStop=" . $keyword_2;
+			$page .= "&deptStopID=" . $stationID;
+			$page .= "&patternID=" . $patternID;
+
+
+			$warmPrompt = "这是一条温馨提示";
+
+			$msgData = array(
+				'openid' => $openID,
+				'template_id' => "ZH8VsjP3Qp-nqu9BfRl8eH-6gDSNwUzCbuf6v6KE2fQ",
+				'form_id' => $formID,
+				'page' => $page,
+				'data' => array(
+					'keyword1' => array("value" => $keyword_1),
+					'keyword2' => array("value" => $keyword_2),
+					'keyword3' => array("value" => $keyword_3),
+					'keyword4' => array("value" => $warmPrompt),
+					'keyword5' => array("value" => $keyword_5)
+				),
+				'emphasis_keyword' => "keyword5.DATA"
+			);
+
+			$templateMessageControllerObj = new TemplateMessageController($msgData);
+
+			if($templateMessageControllerObj->sendTemplateMessage()) {
+
+				//echo "msg send succeed!";
+
+			} else {
+
+				//echo "msg send fail!";
+
+			}
+			
+		}
 
 		$sql = "INSERT INTO trans_message (time, open_id, form_id, station_id, route_id, pattern_id, keyword_1, keyword_2, keyword_3, keyword_5) 
 				VALUES((?), (?), (?), (?), (?), (?), (?), (?), (?), (?))";

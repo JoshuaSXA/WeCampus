@@ -1,6 +1,7 @@
 <?php
 include_once 'TokenController.php';
 
+include_once 'CurlRequestController.php'; 
 
 /**
 * 改类负责控制模板消息的发送
@@ -9,6 +10,8 @@ class TemplateMessageController
 {
 	// 接口调用凭证
 	private $accessTokenController;
+
+	private $curlRequestControllerObj;
 
 	// 接收者用户的openid
 	private $openID;
@@ -34,6 +37,9 @@ class TemplateMessageController
 		// 实例化TokenController 对象
 		$this->accessTokenController = new TokenController();
 
+		// 实例化curl对象
+		$this->curlRequestControllerObj = new CurlRequsetController();
+
 		// 变量赋值
 		$this->openID = $data['openid'];
 
@@ -45,11 +51,39 @@ class TemplateMessageController
 
 		$this->data = $data['data'];
 
-		$this->emphasisKey = $data['emphasis_key']
+		$this->emphasisKey = $data['emphasis_keyword'];
+
 	}
 
 
 	public function sendTemplateMessage() {
+
+		$url = "https://api.weixin.qq.com/cgi-bin/message/wxopen/template/send?access_token=".$this->accessTokenController->getAccessToken();
+
+		$data = array(
+			"touser" => $this->openID,
+
+			"template_id" => $this->templateID,
+
+			"page" => $this->page,
+
+			"form_id" => $this->formID,
+
+			"data" => $this->data,
+
+			"emphasis_keyword" => $this->emphasisKey
+
+		);
+
+		if($this->curlRequestControllerObj->curlPostInformation($url, json_encode($data))) {
+
+			return TRUE;
+
+		} else {
+
+			return FALSE;
+
+		}
 
 	}
 

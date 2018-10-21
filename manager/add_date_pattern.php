@@ -8,8 +8,6 @@ $DBController = new DBController();
 $DBController->connDatabase();
 
 
-
-
 $patternModel = explode(",", $_REQUEST['pattern_model']);
 
 $patternSpan = explode(",", $_REQUEST['pattern_span']);
@@ -19,7 +17,6 @@ if(count($patternModel) != count($patternSpan)) {
 	echo "pattern num should be equal to the span num!";
 
 }
-
 
 
 $multiSchedule = count($patternModel) == 2 ? TRUE : FALSE;
