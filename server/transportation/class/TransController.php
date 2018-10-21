@@ -338,6 +338,7 @@ class TransController
 		$time = $_REQUEST['time'];
 
 		// 提前15分钟
+		
 		$time = date('Y-m-d H:i', strtotime(date('Y-m-d H:i', strtotime($time)).'-15 minute'));
 
 		// 用于页面跳转的
