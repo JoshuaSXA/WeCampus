@@ -13,9 +13,6 @@ var templateID = "ZH8VsjP3Qp-nqu9BfRl8eH-6gDSNwUzCbuf6v6KE2fQ";
 // 温馨提示
 var warmPrompt = "这是一条温馨提示！";
 
-// 跳转的页面
-var transferPage = "pages/transportation/scheduleDetail/scheduleDetail";
-
 // 加载日志模块
 var log4js = require('log4js');
 
@@ -114,6 +111,8 @@ schedule.scheduleJob(rule, function(){
 
 		}
 
+
+
 		getAccessToken(client, function(access_token){
 
 			if(access_token == null) {
@@ -124,6 +123,7 @@ schedule.scheduleJob(rule, function(){
 
 			// 遍历结果
 			for(var i = 0; i < results.length; ++i) {
+				//console.log(results[i]);
 
 				// 发送模板消息
 				sendTemplateMessage(results[i], access_token);
@@ -140,6 +140,7 @@ schedule.scheduleJob(rule, function(){
 
 
 function sendTemplateMessage(data, access_token) {
+	//console.log(data);
 
 	// 这里要判断日期是否加1
 	var deptTime = (data.keyword_5).split(':');
@@ -159,6 +160,9 @@ function sendTemplateMessage(data, access_token) {
 
 	}
 
+	var transferPage = "pages/transportation/index/index";
+
+	/*
 	// 拼接URL，作为小程序跳转时的参数传递
 	transferPage += ("?scheduleTime=" + data.keyword_5);
 	transferPage += ("&routeName=" + data.keyword_1);
@@ -168,7 +172,7 @@ function sendTemplateMessage(data, access_token) {
 	transferPage += ("&deptStop=" + data.keyword_2);
 	transferPage += ("&deptStopID=" + data.station_id);
 	transferPage += ("&patternID=" + data.pattern_id);
-
+	*/
 
 	var postData = {
 
@@ -202,6 +206,7 @@ function sendTemplateMessage(data, access_token) {
 		"emphasis_keyword": "keyword5.DATA"
 
 	}
+
 
 	request({
 

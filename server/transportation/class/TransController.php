@@ -44,6 +44,8 @@ class TransController
 	// 鸡肋构造函数
 	function __construct()
 	{
+
+		date_default_timezone_set('Asia/Shanghai'); 
 		$this->DBController = new DBController();
 		$this->DBController->connDatabase();
 
@@ -355,19 +357,15 @@ class TransController
 		$keyword_3 = $_REQUEST['keyword_3'];
 		$keyword_5 = $_REQUEST['keyword_5'];
 
-		//echo $curTime;
 
 		// 判断是否在15分钟以内，如果是则立即推送，智障需求
 		if(strtotime($time) - strtotime($curTime) <= 900) {
-			
 
 			$tempArray = explode('-', explode(' ', $time)[0]);
 			$deptDate = $tempArray[0] . "年" . $tempArray[1] . "月" . $tempArray[2] . "日";
 
-			
-
-			$page = "pages/transportation/scheduleDetail/scheduleDetail";
-
+			$page = "pages/transportation/index/index";
+/*
 			$page .= "?scheduleTime=" . $keyword_5;
 			$page .= "&routeName=" . $keyword_1;
 			$page .= "&deptDate=" . $deptDate;
@@ -377,7 +375,7 @@ class TransController
 			$page .= "&deptStopID=" . $stationID;
 			$page .= "&patternID=" . $patternID;
 
-
+*/
 			$warmPrompt = "这是一条温馨提示";
 
 			$msgData = array(
