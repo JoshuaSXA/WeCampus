@@ -4,12 +4,12 @@ include_once '../lib/UserInfoController.php';
 
 /*****************************************************
  *
- * 该api用来注册信息
+ * 该api用来接收用户上传的头像
  *
  ****************************************************/
 
 $userInfoControllerObj = new UserInfoController();
 
-$userInfoControllerObj->userRegister();
+$userInfoControllerObj->uploadAvatar();
 
 ?>

@@ -1,5 +1,6 @@
 <?php
 include_once 'DBController.php';
+include_once 'UploadImageController.php';
 
 /**
 * 用户信息控制类
@@ -62,6 +63,8 @@ class UserInfoController {
 
 		$this->avatar = $_REQUSET['avatar'];
 
+		$tempUrl = $_REQUSET['temp_url'];
+
 		$sql = "INSERT INTO user (open_id, school_id, nickname, avatar) VALUES((?), (?), (?), (?))";
 
 		// 创建预处理语句
@@ -85,9 +88,11 @@ class UserInfoController {
 			mysqli_stmt_close($stmt);
 
 			// 这里需要将用户上传的头像从cache文件夹中移出
+			$orgPath = $this->cachePath + $tempUrl;
+			$targetPath = $this->savePath + $tempUrl;
 
-
-
+			rename($orgPath, $targetPath);
+			
         } else {
 
         	// echo $this->DBController->getErrorCode();
@@ -105,35 +110,33 @@ class UserInfoController {
 	// 用户上传头像
 	public uploadAvatar() {
 
-		// 首先判断上传的文件是否出错
-		if($_FILE['file']['error']) {
+		// 实例化图片上传类
+		$uploadImageControllerObj = new UploadImageController();
 
-			echo json_encode(array("success" => FALSE, "errorMsg" => $_FILE['file']['error']), JSON_UNESCAPED_UNICODE);
+		// 设置图片存储路径
+		$uploadImageControllerObj->setSavePath('../data/cache/');
+
+		// 设置图片压缩程度
+		$uploadImageControllerObj->setCompressValue(60);
+
+		// 图片名称
+		$imgName = 'avatar_' . $this->openID . '_' . time() . '.jpg';
+
+		// 上传图片
+		if($uploadImageControllerObj->uploadImg('avatar', $imgName)) {
+
+			echo json_encode(array('success' => TRUE, 'temp_url' => $imgName), JSON_UNESCAPED_UNICODE);
 
 		} else {
-			$allowType = array('image/png', 'image/jpg', 'image/jpeg');
-			// 判断文件类型
-			if(!in_array($_FILE['file']['type'], $allowType)) {
 
-				echo json_encode(array("success" => FALSE, "errorMsg" => 'Invalid image type'), JSON_UNESCAPED_UNICODE);
-
-			} else {
-
-
-
-			}
-
+			echo json_encode(array('success' => FALSE, 'temp_url' => ''), JSON_UNESCAPED_UNICODE);
 		}
 
-
+		return;
 	}
 
 
 
-
-
 }
-
-
 
 ?>
