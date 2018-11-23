@@ -50,20 +50,20 @@ class UserInfoController {
 		$this->DBController->connDatabase();
 
 		// 提前获取用户的open_id
-		$this->openID = $_REQUSET['open_id']； 
+		$this->openID = $_REQUEST['open_id']; 
 	}
 
 
 	// 用户注册
 	public function userRegister() {
 
-		$this->schoolID = $_REQUSET['school_id'];
+		$this->schoolID = $_REQUEST['school_id'];
 
-		$this->nickname = $_REQUSET['nickname'];
+		$this->nickname = $_REQUEST['nickname'];
 
-		$this->avatar = $_REQUSET['avatar'];
+		$this->avatar = $_REQUEST['avatar'];
 
-		$tempUrl = $_REQUSET['temp_url'];
+		$tempUrl = $_REQUEST['temp_url'];
 
 		$sql = "INSERT INTO user (open_id, school_id, nickname, avatar) VALUES((?), (?), (?), (?))";
 
@@ -108,7 +108,9 @@ class UserInfoController {
 
 
 	// 用户上传头像
-	public uploadAvatar() {
+	public function uploadAvatar() {
+		// 完整的路径，返回给前端
+		//$serverCachePath = 'https://www.we-campus.cn/WeCampus/data/cache/';
 
 		// 实例化图片上传类
 		$uploadImageControllerObj = new UploadImageController();
