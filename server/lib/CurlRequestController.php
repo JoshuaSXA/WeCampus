@@ -4,7 +4,7 @@
 /**
 * 封装常规的curl请求方法
 */
-class CurlRequsetController
+class CurlRequestController
 {
 	// curl请求的状态信息，0为请求正确，其余为错误码
 	private $curlStatus;
@@ -107,6 +107,42 @@ class CurlRequsetController
 		}
 
 		curl_close($curl);
+	}
+
+	// 使用curl来实现图片下载，就问怕不怕
+	public function curlDownloadFile($fileUrl, $savePath, $timeOut = 80) {
+
+		$curl = curl_init();
+
+		curl_setopt($curl,CURLOPT_POST, FALSE);
+
+		curl_setopt($curl, CURLOPT_URL, $fileUrl);
+
+		curl_setopt($curl,CURLOPT_RETURNTRANSFER, TRUE); 
+
+		// 获取文件内容
+		$fileContent = curl_exec($curl);
+
+		curl_close($curl);
+
+		$this->curlStatus = curl_errno($curl);
+
+		if($this->curlStatus) {
+
+			return FALSE;
+			
+		} else {
+
+			$downloadFile = fopen($savePath, 'w');
+
+			fwrite($downloadFile, $fileContent);
+
+			fclose($downloadFile);
+
+			return TRUE;
+
+		}
+
 	}
 
 }

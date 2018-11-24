@@ -1,6 +1,7 @@
 <?php
 include_once 'DBController.php';
 include_once 'UploadImageController.php';
+include_once 'CurlRequestController.php';
 
 /**
 * 用户信息控制类
@@ -63,7 +64,38 @@ class UserInfoController {
 
 		$this->avatar = $_REQUEST['avatar'];
 
-		$tempUrl = $_REQUEST['temp_url'];
+		// 保存到数据库中的文件名
+		$imgName = '';
+
+		if(strpos($this->avatar,'https') !==false) {
+
+			// 如果是微信头像则生成新的头像名称
+
+			$imgName = 'avatar_' . $this->openID . '_' . time() . '.jpg';
+
+			if(!$this->downloadAvatar($this->avatar, $imgName)) {
+
+				echo json_encode(array("success" => FALSE), JSON_UNESCAPED_UNICODE);
+
+				return;
+
+			} 
+
+		} else {
+
+			// 如果是用户上传的头像，则使用默认的
+
+			$imgName = $this->avatar;
+
+			// 这里需要将用户上传的头像从cache文件夹中移出
+			$orgPath = $this->cachePath . $this->avatar;
+			$targetPath = $this->savePath . $this->avatar;
+
+			rename($orgPath, $targetPath);
+
+		}
+
+
 
 		$sql = "INSERT INTO user (open_id, school_id, nickname, avatar) VALUES((?), (?), (?), (?))";
 
@@ -73,8 +105,7 @@ class UserInfoController {
         if(mysqli_stmt_prepare($stmt, $sql)){
 
 			// 绑定参数
-			mysqli_stmt_bind_param($stmt, "siss", $this->openID, $this->schoolID, $this->nickname, $this->avatar);   
-
+			mysqli_stmt_bind_param($stmt, "siss", $this->openID, $this->schoolID, $this->nickname, $imgName);   
 			// 执行查询
 			mysqli_stmt_execute($stmt);
 
@@ -87,15 +118,9 @@ class UserInfoController {
 			// 关闭mysqli_stmt类
 			mysqli_stmt_close($stmt);
 
-			// 这里需要将用户上传的头像从cache文件夹中移出
-			$orgPath = $this->cachePath + $tempUrl;
-			$targetPath = $this->savePath + $tempUrl;
-
-			rename($orgPath, $targetPath);
+			echo json_encode(array("success" => TRUE), JSON_UNESCAPED_UNICODE);
 			
         } else {
-
-        	// echo $this->DBController->getErrorCode();
 
         	echo json_encode(array("success" => FALSE), JSON_UNESCAPED_UNICODE);
         	
@@ -138,6 +163,76 @@ class UserInfoController {
 	}
 
 
+	// 如果用户的头像是微信头像，则下载图片并保存到avatar文件夹
+	private function downloadAvatar($avatarUrl, $imgName) {
+
+		$curlRequestControllerObj = new CurlRequestController();
+
+		if($curlRequestControllerObj->curlDownloadFile($avatarUrl, $this->savePath . $imgName)) {
+
+			return TRUE;
+
+		} else {
+
+			return FALSE;
+		}
+
+	}
+
+
+	// 获取最近的学校
+	public function getTheNearestSchool() {
+
+		$longitude = $_GET['longitude'];
+
+		$latitude = $_GET['latitude'];
+
+		// 按照经纬度计算距离，并排序
+		$sql = "SELECT school_id, school_name, 
+				ROUND(6378.138*2*ASIN(SQRT(POW(SIN(((?)*PI()/180-latitude*PI()/180)/2),2)+COS((?)*PI()/180)*COS(latitude*PI()/180)*POW(SIN(((?)*PI()/180-longitude*PI()/180)/2),2)))*1000) AS distance 
+				FROM school NATURAL JOIN campus ORDER BY distance ASC LIMIT 1";
+
+	    // 创建预处理语句
+		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
+        
+
+        if(mysqli_stmt_prepare($stmt, $sql)){
+
+			mysqli_stmt_bind_param($stmt, "ddd", $latitude, $latitude, $longitude);   
+			   
+			// 执行查询
+			mysqli_stmt_execute($stmt);
+
+			// 获取查询结果
+			$result = mysqli_stmt_get_result($stmt);  
+
+			// 获取值
+			$retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);  
+
+			// 我们要根据学校的编号获取学校的logo
+			$logoName = $retValue['school_id'] . ".jpg";
+
+			echo $logoPath;
+
+			// 返回结果
+			echo json_encode($retValue, JSON_UNESCAPED_UNICODE);
+
+			// 释放结果
+			mysqli_stmt_free_result($stmt);
+
+			// 关闭mysqli_stmt类
+			mysqli_stmt_close($stmt);	
+	
+        } else {
+
+        	echo $this->DBController->getErrorCode();
+
+        }
+
+		// 断开与数据库的连接
+		$this->DBController->disConnDatabase();
+
+	}
 
 }
 
