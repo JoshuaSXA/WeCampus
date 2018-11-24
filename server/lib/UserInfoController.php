@@ -210,12 +210,13 @@ class UserInfoController {
 			$retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);  
 
 			// 我们要根据学校的编号获取学校的logo
-			$logoName = $retValue['school_id'] . ".jpg";
+			$logoName = $retValue[0]['school_id'] . ".jpg";
 
-			echo $logoPath;
+			// 读取第一行数据
+			$assocData = $retValue[0];
 
 			// 返回结果
-			echo json_encode($retValue, JSON_UNESCAPED_UNICODE);
+			echo json_encode(array('school_id' => $assocData['school_id'], 'school_name' => $assocData['school_name'], 'school_logo' => $logoName), JSON_UNESCAPED_UNICODE);
 
 			// 释放结果
 			mysqli_stmt_free_result($stmt);
