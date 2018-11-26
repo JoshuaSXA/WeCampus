@@ -117,8 +117,6 @@ class UserInfoController {
 
 			// 关闭mysqli_stmt类
 			mysqli_stmt_close($stmt);
-
-			echo json_encode(array("success" => TRUE), JSON_UNESCAPED_UNICODE);
 			
         } else {
 
@@ -232,6 +230,87 @@ class UserInfoController {
 
 		// 断开与数据库的连接
 		$this->DBController->disConnDatabase();
+
+	}
+
+	public function getSchoolList() {
+
+		$sql = "SELECT * FROM school ORDER BY school_name DESC";
+
+		// 创建预处理语句
+		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
+
+        if(mysqli_stmt_prepare($stmt, $sql)){
+
+			// 执行查询
+			mysqli_stmt_execute($stmt);
+
+			// 获取查询结果
+			$result = mysqli_stmt_get_result($stmt);
+
+			// 获取值
+			$retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);
+
+			// 返回结果
+			echo json_encode($retValue, JSON_UNESCAPED_UNICODE);
+
+			// 释放结果
+			mysqli_stmt_free_result($stmt);
+
+			// 关闭mysqli_stmt类
+			mysqli_stmt_close($stmt);
+			
+        } else {
+
+        	echo $this->DBController->getErrorCode();
+        	
+        }	
+
+        // 断开与数据库的连接
+		$this->DBController->disConnDatabase();	
+
+	}
+
+
+	// 获取所有的用户信息
+	public function getUserInfo() {
+		// 获取的参量只有用户的openid
+
+		$sql = "SELECT school_id, school_name, student_id, name, nickname, avatar, gender, phone FROM user NATURAL JOIN school WHERE open_id = (?)";
+
+		// 创建预处理语句
+		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
+
+        if(mysqli_stmt_prepare($stmt, $sql)){
+
+			// 绑定参数
+			mysqli_stmt_bind_param($stmt, "s", $this->openID);   
+			// 执行查询
+			mysqli_stmt_execute($stmt);
+
+			// 获取查询结果
+			$result = mysqli_stmt_get_result($stmt);
+
+			// 获取值
+			$retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);
+
+			// 返回结果
+			echo json_encode($retValue[0], JSON_UNESCAPED_UNICODE);
+
+			// 释放结果
+			mysqli_stmt_free_result($stmt);
+
+			// 关闭mysqli_stmt类
+			mysqli_stmt_close($stmt);
+			
+        } else {
+
+        	echo $this->DBController->getErrorCode();
+        	
+        }	
+
+        // 断开与数据库的连接
+		$this->DBController->disConnDatabase();	
 
 	}
 
