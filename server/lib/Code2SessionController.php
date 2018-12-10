@@ -4,8 +4,6 @@
 include_once 'GlobalVar.php';
 
 // 引用curl请求类
-//include 'CurlRequestController.php';
-
 include_once 'CurlRequestController.php';
 
 /**
@@ -22,7 +20,7 @@ class Code2SessionController
 	function __construct()
 	{
 		$this->code = $_GET['code'];
-		$this->curlRequestControllerObj = new CurlRequsetController();
+		$this->curlRequestControllerObj = new CurlRequestController();
 	}
 
 
@@ -35,12 +33,12 @@ class Code2SessionController
 		if($this->curlRequestControllerObj->curlGetInformation($url)) {
 
 			// 请求成功时返回数据
-			echo json_encode($this->curlRequestControllerObj->getReturnData());
+			return $this->curlRequestControllerObj->getReturnData();
 
 		} else {
 
 			// 请求失败
-			echo FALSE;
+			return FALSE;
 
 		}
 	}

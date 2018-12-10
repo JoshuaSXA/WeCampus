@@ -95,8 +95,6 @@ class UserInfoController {
 
 		}
 
-
-
 		$sql = "INSERT INTO user (open_id, school_id, nickname, avatar) VALUES((?), (?), (?), (?))";
 
 		// 创建预处理语句
@@ -107,10 +105,17 @@ class UserInfoController {
 			// 绑定参数
 			mysqli_stmt_bind_param($stmt, "siss", $this->openID, $this->schoolID, $this->nickname, $imgName);   
 			// 执行查询
-			mysqli_stmt_execute($stmt);
+			
+			if(mysqli_stmt_execute($stmt)) {
 
-			// 返回结果
-			echo json_encode(array("success" => TRUE), JSON_UNESCAPED_UNICODE);
+				// 返回结果
+				echo json_encode(array("success" => TRUE));
+
+			} else {
+
+				echo json_encode(array("success" => FALSE));
+
+			}
 
 			// 释放结果
 			mysqli_stmt_free_result($stmt);
@@ -120,7 +125,7 @@ class UserInfoController {
 			
         } else {
 
-        	echo json_encode(array("success" => FALSE), JSON_UNESCAPED_UNICODE);
+        	echo json_encode(array("success" => FALSE));
         	
         }	
 
@@ -311,6 +316,167 @@ class UserInfoController {
 
         // 断开与数据库的连接
 		$this->DBController->disConnDatabase();	
+
+	}
+
+
+	// 负责修改用户的基本信息
+	public function modifyUserInfo() {
+
+		// 可供修改的用户信息有nickname、name、gender、student_id、school_id、phone
+		$attributeIndexMap = array('nickname', 'name', 'gender', 'student_id', 'school_id', 'phone');
+		$modifyAttributeMap = array();
+
+		$sqlParameter = '';
+		$sqlBindParaType = '';
+
+		// 遍历map，将待修改的属性添加到数组中
+		foreach ($attributeIndexMap as $attr) {
+			if(!empty($_REQUEST[$attr])) {
+				$sqlBindParaType .= ($attr == 'school_id' ? 'i' : 's');
+				$sqlParameter .= ($attr . '=(?),'); 
+				array_push($modifyAttributeMap, $attr);
+			}
+		}
+
+		// 待修改的属性数量
+		$modifyAttributeNum = count($modifyAttributeMap);
+		if($modifyAttributeNum == 0) {
+			// 没有需要修改的属性，nmsl
+			echo json_encode(array('success' => TRUE));
+			return;
+		}
+
+		// 去除最右侧一个逗号 
+		$sqlParameter = rtrim($sqlParameter, ',');
+		$sqlBindParaType .= 's';
+
+		$sql = "UPDATE user SET " . $sqlParameter . " WHERE open_id=(?)";
+
+		// 创建预处理语句
+		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
+
+        if(mysqli_stmt_prepare($stmt, $sql)){
+
+			// 绑定参数，因为参数的数量是动态变化的，所以这里比较麻烦（留个坑）
+			if($modifyAttributeNum == 1) {
+
+				mysqli_stmt_bind_param($stmt, $sqlBindParaType, $_REQUEST[$modifyAttributeMap[0]], $this->openID);
+				
+			} elseif($modifyAttributeNum == 2) {
+
+				mysqli_stmt_bind_param($stmt, $sqlBindParaType, $_REQUEST[$modifyAttributeMap[0]], $_REQUEST[$modifyAttributeMap[1]], $this->openID);
+
+			} elseif($modifyAttributeNum == 3) {
+
+				mysqli_stmt_bind_param($stmt, $sqlBindParaType, $_REQUEST[$modifyAttributeMap[0]], $_REQUEST[$modifyAttributeMap[1]], $_REQUEST[$modifyAttributeMap[2]], $this->openID);
+
+			} elseif($modifyAttributeNum == 4) {
+
+				mysqli_stmt_bind_param($stmt, $sqlBindParaType, $_REQUEST[$modifyAttributeMap[0]], $_REQUEST[$modifyAttributeMap[1]], $_REQUEST[$modifyAttributeMap[2]], $_REQUEST[$modifyAttributeMap[3]], $this->openID);
+
+			} elseif($modifyAttributeNum == 5) {
+
+				mysqli_stmt_bind_param($stmt, $sqlBindParaType, $_REQUEST[$modifyAttributeMap[0]], $_REQUEST[$modifyAttributeMap[1]], $_REQUEST[$modifyAttributeMap[2]], $_REQUEST[$modifyAttributeMap[3]], $_REQUEST[$modifyAttributeMap[4]], $this->openID);
+
+			} elseif ($modifyAttributeNum == 6) {
+				
+				mysqli_stmt_bind_param($stmt, $sqlBindParaType, $_REQUEST[$modifyAttributeMap[0]], $_REQUEST[$modifyAttributeMap[1]], $_REQUEST[$modifyAttributeMap[2]], $_REQUEST[$modifyAttributeMap[3]], $_REQUEST[$modifyAttributeMap[4]], $_REQUEST[$modifyAttributeMap[5]], $this->openID);
+
+			}
+
+			// 执行查询
+			$updateStatus = mysqli_stmt_execute($stmt);
+
+			// 返回结果
+			if($updateStatus) {
+
+				echo json_encode(array('success' => TRUE));
+
+			} else {
+
+				echo json_encode(array('success' => FALSE));
+
+			}
+
+			// 释放结果
+			mysqli_stmt_free_result($stmt);
+
+			// 关闭mysqli_stmt类
+			mysqli_stmt_close($stmt);
+			
+        } else {
+
+        	echo json_encode(array('success' => FALSE));
+        	
+        }	
+
+        // 断开与数据库的连接
+		$this->DBController->disConnDatabase();
+	}
+
+	// 负责实现用户修改头像
+	public function changeUserAvatar() {
+
+		// 原始的用户的头像文件名
+		$oldAvatarFileName = $_REQUEST['old_avatar'];
+		$newAvatarFileName = $_REQUEST['new_avatar'];
+
+		// 这里需要将用户新上传的头像从cache文件夹中移出
+		$orgPath = $this->cachePath . $newAvatarFileName;
+		$targetPath = $this->savePath . $newAvatarFileName;
+
+		// 将原始的文件从avatar文件夹中删除
+		$deletePath = $this->savePath . $oldAvatarFileName;
+
+		if(rename($orgPath, $targetPath)){
+
+			unlink($deletePath);
+
+
+			$sql = 'UPDATE user SET avatar=(?) WHERE open_id=(?)';
+
+			$stmt = mysqli_stmt_init($this->DBController->getConnObject());
+
+	        if(mysqli_stmt_prepare($stmt, $sql)){
+
+				// 绑定参数
+				mysqli_stmt_bind_param($stmt, "ss", $newAvatarFileName, $this->openID);   
+				// 执行查询
+				mysqli_stmt_execute($stmt);
+
+				if(mysqli_stmt_execute($stmt)) {
+
+					// 更新成功
+					echo json_encode(array("success" => TRUE));
+
+				} else {
+					// 更新失败
+					echo json_encode(array("success" => FALSE));
+
+				}
+
+				// 释放结果
+				mysqli_stmt_free_result($stmt);
+
+				// 关闭mysqli_stmt类
+				mysqli_stmt_close($stmt);
+				
+	        } else {
+
+	        	//echo $this->DBController->getErrorCode();
+	        	echo json_encode(array("success" => FALSE));
+	        	
+	        }	
+
+		} else {
+
+			echo json_encode(array('success' => FALSE));
+
+		}
+
+		// 断开与数据库的连接
+		$this->DBController->disConnDatabase();
 
 	}
 

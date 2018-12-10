@@ -94,7 +94,7 @@ class UploadImageController {
 		list($width,$height,$type)=getimagesize($imgSrc); 
 
 		// 设置图片类型
-    	header('Content-Type:image/jpeg'); 
+    	header('Content-Type:image/jpg'); 
 
     	// 获取新的画布
     	$imageWp=imagecreatetruecolor($width, $height); 
