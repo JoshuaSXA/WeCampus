@@ -415,16 +415,39 @@ class UserInfoController {
 		$this->DBController->disConnDatabase();
 	}
 
+
 	// 负责实现用户修改头像
 	public function changeUserAvatar() {
 
 		// 原始的用户的头像文件名
 		$oldAvatarFileName = $_REQUEST['old_avatar'];
-		$newAvatarFileName = $_REQUEST['new_avatar'];
+
+		// 实例化图片上传类
+		$uploadImageControllerObj = new UploadImageController();
+
+		// 设置图片存储路径
+		$uploadImageControllerObj->setSavePath('../data/cache/');
+
+		// 设置图片压缩程度
+		$uploadImageControllerObj->setCompressValue(60);
+
+		// 图片名称
+		$imgName = 'avatar_' . $this->openID . '_' . time() . '.jpg';
+
+		// 上传图片，并判断上传是否成功，如果失败则返回错误信息
+		if(!$uploadImageControllerObj->uploadImg('avatar', $imgName)) {
+
+			echo json_encode(array('success' => FALSE, 'avatar' => ''));
+
+			$this->DBController->disConnDatabase();
+
+			return;
+
+		}
 
 		// 这里需要将用户新上传的头像从cache文件夹中移出
-		$orgPath = $this->cachePath . $newAvatarFileName;
-		$targetPath = $this->savePath . $newAvatarFileName;
+		$orgPath = $this->cachePath . $imgName;
+		$targetPath = $this->savePath . $imgName;
 
 		// 将原始的文件从avatar文件夹中删除
 		$deletePath = $this->savePath . $oldAvatarFileName;
@@ -441,18 +464,18 @@ class UserInfoController {
 	        if(mysqli_stmt_prepare($stmt, $sql)){
 
 				// 绑定参数
-				mysqli_stmt_bind_param($stmt, "ss", $newAvatarFileName, $this->openID);   
+				mysqli_stmt_bind_param($stmt, "ss", $imgName, $this->openID);   
 				// 执行查询
 				mysqli_stmt_execute($stmt);
 
 				if(mysqli_stmt_execute($stmt)) {
 
 					// 更新成功
-					echo json_encode(array("success" => TRUE));
+					echo json_encode(array("success" => TRUE, 'avatar' => $imgName));
 
 				} else {
 					// 更新失败
-					echo json_encode(array("success" => FALSE));
+					echo json_encode(array("success" => FALSE, 'avatar' => ''));
 
 				}
 
@@ -465,13 +488,13 @@ class UserInfoController {
 	        } else {
 
 	        	//echo $this->DBController->getErrorCode();
-	        	echo json_encode(array("success" => FALSE));
+	        	echo json_encode(array("success" => FALSE, 'avatar' => ''));
 	        	
 	        }	
 
 		} else {
 
-			echo json_encode(array('success' => FALSE));
+			echo json_encode(array('success' => FALSE, 'avatar' => ''));
 
 		}
 
