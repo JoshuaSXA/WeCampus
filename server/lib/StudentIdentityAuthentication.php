@@ -32,6 +32,7 @@ class StudentIdentityAuthentication {
 
 		// 提前获取用户的open_id
 		$this->openID = $_REQUEST['open_id']; 
+		//echo $this->openID;
 	}
 
 	// 用户上传认证信息
@@ -63,36 +64,48 @@ class StudentIdentityAuthentication {
 
 		} 
 
-		$sql = "INSERT INTO student_auth (open_id, name, student_id, card) VALUES((?), (?), (?), (?))";
+		// 关闭数据库的自动提交功能
+		mysqli_autocommit($this->DBController->getConnObject(), FALSE);
 
+		$sql_1 = "INSERT INTO student_auth (begin_time, open_id, name, student_id, card) VALUES(NOW(), (?), (?), (?), (?))";
+		$sql_2 = "UPDATE user SET auth=2 WHERE open_id=(?)";
 		// 创建预处理语句
-		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
+		$stmt_1 = mysqli_stmt_init($this->DBController->getConnObject());
+		$stmt_2 = mysqli_stmt_init($this->DBController->getConnObject());
 
-        if(mysqli_stmt_prepare($stmt, $sql)){
+        if(mysqli_stmt_prepare($stmt_1, $sql_1) && mysqli_stmt_prepare($stmt_2, $sql_2)){
 
 			// 绑定参数
-			mysqli_stmt_bind_param($stmt, "ssss", $this->openID, $name, $studentID, $imgName);   
-			// 执行查询
-			
-			if(mysqli_stmt_execute($stmt)) {
+			mysqli_stmt_bind_param($stmt_1, "ssss", $this->openID, $name, $studentID, $imgName);  
 
-				echo json_encode(array('success' => TRUE, 'temp_url' => $imgName));
+			mysqli_stmt_bind_param($stmt_2, "s", $this->openID); 
+			// 执行查询
+			$res_1 = mysqli_stmt_execute($stmt_1);
+			$res_2 = mysqli_stmt_execute($stmt_2);
+	
+			if($res_1 && $res_2) {
+
+				mysqli_commit($this->DBController->getConnObject());
+				echo json_encode(array("success" => TRUE, 'temp_url' => $imgName));
 
 			} else {
 
+				mysqli_rollback($this->DBController->getConnObject());
 				echo json_encode(array("success" => FALSE, 'temp_url' => ''));
 
 			}
 
 			// 释放结果
-			mysqli_stmt_free_result($stmt);
+			mysqli_stmt_free_result($stmt_1);
+			mysqli_stmt_free_result($stmt_2);
 
 			// 关闭mysqli_stmt类
-			mysqli_stmt_close($stmt);
+			mysqli_stmt_close($stmt_1);
+			mysqli_stmt_close($stmt_2);
 			
         } else {
 
-        	echo json_encode(array("success" => FALSE));
+        	echo json_encode(array("success" => FALSE, 'temp_url' => ''));
         	
         }	
 
