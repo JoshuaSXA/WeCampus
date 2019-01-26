@@ -538,7 +538,7 @@ class CarPoolingController {
 
 
 	// 创建者解散当前拼车
-	public function dissoveCarPoolingCase() {
+	public function dissolveCarPoolingCase() {
 
 		$carPoolingID = $_REQUEST['carpool_id'];
 
