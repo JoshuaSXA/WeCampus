@@ -2,11 +2,10 @@
 
 include_once '../../lib/DBController.php';
 
-
 /********************************************
  * 拼车模块控制类
- * 拼车case的状态： 0——正在拼车，1——拼车成功，2——创建者取消当前拼车
- * 拼车人的状态：0——已参与当前拼车，1——已退出当前拼车，2——被踢出
+ * 拼车case的状态： 0——正在拼车，1——拼车成功，2——创建者取消当前拼车  carpool_status
+ * 拼车人的状态：0——已参与当前拼车，1——已退出当前拼车，2——被踢出     riding_status
  *******************************************/
 
 class CarPoolingController {
@@ -207,6 +206,8 @@ class CarPoolingController {
 
 	}
 
+
+    /*已修改*/
 	// 查询拼车列表，注意这里需要分页查询
 	public function getCarPoolingCaseList() {
 
@@ -221,7 +222,7 @@ class CarPoolingController {
 
 		$endPlace = $_GET['end_place'];
 
-		$sql = "SELECT carpool_id, nickname, avatar, estab_time, start_place, end_place, start_time, end_time, cur_num, max_num FROM (SELECT * FROM carpool_case WHERE start_place = (?) AND end_place = (?) AND carpool_status = 0 AND ((?) BETWEEN start_time AND end_time) AND ((?) <= max_num - cur_num)) AS a JOIN user AS b ON a.creator = b.open_id WHERE carpool_id > (?) ORDER BY carpool_id LIMIT 10";
+		$sql = "SELECT s.carpool_id, s.nickname, s.avatar, s.estab_time, s.start_place, s.end_place, s.start_time, s.end_time, s.cur_num, s.max_num, EXISTS(SELECT * FROM passenger AS c WHERE s.carpool_id = c.carpool_id AND c.carpool_status = 2) AS participant FROM ((SELECT * FROM carpool_case WHERE start_place = (?) AND end_place = (?) AND carpool_status = 0 AND ((?) BETWEEN start_time AND end_time) AND ((?) <= max_num - cur_num)) AS a JOIN user AS b ON a.creator = b.open_id) AS s WHERE carpool_id > (?) ORDER BY carpool_id LIMIT 10";
 
 		// 创建预处理语句
 		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
@@ -261,12 +262,15 @@ class CarPoolingController {
 	}
 
 
-	// 查询拼车的二级页面，拼车详情
+	/*已修改*/
+	// 查询拼车和我的拼车的二级页面，拼车详情
 	public function getCarPoolDetail() {
 
 		$carPoolCaseID = $_GET['carpool_id'];
 
-		$sql_1 = "SELECT s.carpool_id, s.creator, s.nickname, s.avatar, s.phone, s.auth, s.estab_time, (SELECT place_name FROM pick_up_place AS m WHERE m.place_id = s.start_place) AS start_name, (SELECT place_name FROM pick_up_place AS n WHERE n.place_id = s.end_place) AS end_name, s.start_time, s.end_time, s.cur_num, s.max_num, s.carpool_status, EXISTS(SELECT * FROM passenger AS a WHERE a.carpool_id=(?) AND a.open_id=(?)) AS participant, (SELECT b.riding_status FROM passenger AS b WHERE b.carpool_id=(?) AND b.open_id=(?)) AS exit FROM (carpool_case JOIN user ON carpool_case.creator = user.open_id) AS s WHERE s.carpool_id = (?)";
+		// $sql_1 = "SELECT s.carpool_id, s.creator, s.nickname, s.avatar, s.phone, s.auth, s.estab_time, (SELECT place_name FROM pick_up_place AS m WHERE m.place_id = s.start_place) AS start_name, (SELECT place_name FROM pick_up_place AS n WHERE n.place_id = s.end_place) AS end_name, s.start_time, s.end_time, s.cur_num, s.max_num, s.carpool_status, EXISTS(SELECT * FROM passenger AS a WHERE a.carpool_id=(?) AND a.open_id=(?)) AS participant, (SELECT b.riding_status FROM passenger AS b WHERE b.carpool_id=(?) AND b.open_id=(?)) AS exit FROM (carpool_case JOIN user ON carpool_case.creator = user.open_id) AS s WHERE s.carpool_id = (?)";
+
+		$sql_1 = "SELECT s.carpool_id, s.creator, s.nickname, s.avatar, s.phone, s.auth, s.estab_time, (SELECT place_name FROM pick_up_place AS m WHERE m.place_id = s.start_place) AS start_name, (SELECT place_name FROM pick_up_place AS n WHERE n.place_id = s.end_place) AS end_name, s.start_time, s.end_time, s.cur_num, s.max_num, s.carpool_status, CASE s.creator WHEN (?) THEN -1 ELSE (SELECT k.riding_status FROM passenger AS k WHERE k.open_id = (?)) END AS riding_status FROM (carpool_case JOIN user ON carpool_case.creator = user.open_id) AS s WHERE s.carpool_id = (?)";
 
 		$sql_2 = "SELECT open_id, nickname, avatar, phone, auth FROM passenger NATURAL JOIN user WHERE carpool_id = (?) AND riding_status = 0";
 
@@ -280,9 +284,9 @@ class CarPoolingController {
         if(mysqli_stmt_prepare($stmt_1, $sql_1) && mysqli_stmt_prepare($stmt_2, $sql_2)){
 
 			// 绑定参数
-			mysqli_stmt_bind_param($stmt_1, "isisi", $carPoolCaseID, $this->openID, $carPoolCaseID, $this->openID, $carPoolCaseID);  
+			mysqli_stmt_bind_param($stmt_1, "ssi", $this->openID, $this->openID, $carPoolCaseID);  
 
-			mysqli_stmt_bind_param($stmt_2, "s", $carPoolCaseID); 
+			mysqli_stmt_bind_param($stmt_2, "i", $carPoolCaseID); 
 			// 执行查询
 			$res_1 = mysqli_stmt_execute($stmt_1);
 			$res_2 = mysqli_stmt_execute($stmt_2);
@@ -326,12 +330,15 @@ class CarPoolingController {
 	}
 
 
+	/*已修改*/
 	// 查询我的历史拼车记录，注意这里需要分页查询
 	public function getMyCarPoolingHistory() {
 
 		$preCaseID = $_GET['page_border'];
 
-		$sql = "SELECT k.carpool_id, (SELECT place_name FROM pick_up_place AS a WHERE a.place_id = k.start_place) AS start_name, (SELECT place_name FROM pick_up_place AS b WHERE b.place_id = k.end_place) AS end_name, k.start_time, k.end_time, k.cur_num, k.max_num, k.carpool_status FROM (carpool_case NATURAL JOIN (SELECT s.carpool_id FROM passenger AS s WHERE s.open_id =(?))) AS k WHERE k.carpool_id > (?) ORDER BY k.carpool_id LIMIT 10";
+		// $sql = "SELECT k.carpool_id, (SELECT place_name FROM pick_up_place AS a WHERE a.place_id = k.start_place) AS start_name, (SELECT place_name FROM pick_up_place AS b WHERE b.place_id = k.end_place) AS end_name, k.start_time, k.end_time, k.cur_num, k.max_num, k.carpool_status FROM (carpool_case NATURAL JOIN (SELECT s.carpool_id FROM passenger AS s WHERE s.open_id =(?))) AS k WHERE k.carpool_id < (?) ORDER BY k.carpool_id DESC LIMIT 10";
+
+		$sql = "SELECT s.carpool_id, s.creator, s.estab_time, (SELECT place_name FROM pick_up_place AS m WHERE m.place_id = s.start_place) AS start_name, (SELECT place_name FROM pick_up_place AS n WHERE n.place_id = s.end_place) AS end_name, s.start_time, s.end_time, s.cur_num, s.max_num, s.carpool_status, CASE s.creator WHEN (?) THEN -1 ELSE (SELECT k.riding_status FROM passenger AS k AND k.open_id = (?)) END AS riding_status FROM carpool_case AS s WHERE s.carpool_id < (?) ORDER BY s.carpool_id DESC LIMIT 10";
 
 		// 创建预处理语句
 		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
@@ -339,7 +346,7 @@ class CarPoolingController {
 		if(mysqli_stmt_prepare($stmt, $sql)){
 
 			// 绑定参数
-			mysqli_stmt_bind_param($stmt, "si", $this->openID, $preCaseID);
+			mysqli_stmt_bind_param($stmt, "ssi", $this->openID, $this->openID, $preCaseID);
 
 			// 执行查询
 			if(!mysqli_stmt_execute($stmt)) {
@@ -471,12 +478,12 @@ class CarPoolingController {
 	// 创建者踢人
 	public function removePassengerFromCarPooling() {
 
-		$carPoolingID = $_REQUEST['carpool_id'];
+		//$carPoolingID = $_REQUEST['carpool_id'];
 
 		$passengerOpenID = $_REQUEST['passenger_open_id'];
 
 		// 我们首先要确认踢人者身份是不是拼车的创建者
-		$checkCreatorRes = $this->checkCreatorStatus($this->openID, $carPoolingID);
+		$checkCreatorRes = $this->checkCreatorStatus($this->openID, $passengerOpenID);
 
 		if($checkCreatorRes['success']){
 
@@ -503,7 +510,7 @@ class CarPoolingController {
 		if(mysqli_stmt_prepare($stmt, $sql)){
 
 			// 绑定参数
-			mysqli_stmt_bind_param($stmt, "is", $carPoolingID, $passengerOpenID);
+			mysqli_stmt_bind_param($stmt, "is", $this->openID, $passengerOpenID);
 
 			// 执行查询
 			if(!mysqli_stmt_execute($stmt)) {
@@ -529,17 +536,62 @@ class CarPoolingController {
 
 	}
 
-/*
+
 	// 创建者解散当前拼车
 	public function dissoveCarPoolingCase() {
 
 		$carPoolingID = $_REQUEST['carpool_id'];
 
-		$sql_1 = "UPDATE carpool_case SET carpool_status = 1";
+		$sql_1 = "UPDATE carpool_case SET carpool_status = 2 WHERE carpool_id = (?)";
 
+		$sql_2 = "UPDATE passenger SET riding_status = 1 WHERE carpool_id = (?) AND riding_status = 0";
+
+		// 关闭数据库的自动提交功能，保持原子性
+		mysqli_autocommit($this->DBController->getConnObject(), FALSE);
+
+		// 创建预处理语句
+		$stmt_1 = mysqli_stmt_init($this->DBController->getConnObject());
+		$stmt_2 = mysqli_stmt_init($this->DBController->getConnObject());
+
+        if(mysqli_stmt_prepare($stmt_1, $sql_1) && mysqli_stmt_prepare($stmt_2, $sql_2)){
+
+			// 绑定参数
+			mysqli_stmt_bind_param($stmt_1, "i", $carPoolCaseID);  
+
+			mysqli_stmt_bind_param($stmt_2, "i", $carPoolCaseID); 
+			// 执行查询
+			$res_1 = mysqli_stmt_execute($stmt_1);
+			$res_2 = mysqli_stmt_execute($stmt_2);
+	
+			if($res_1 && $res_2) {
+
+				mysqli_commit($this->DBController->getConnObject());
+
+				echo json_encode(array("success" => TRUE));
+
+			} else {
+
+				mysqli_rollback($this->DBController->getConnObject());
+				echo json_encode(array("success" => FALSE));
+
+			}
+
+			// 释放结果
+			mysqli_stmt_free_result($stmt_1);
+			mysqli_stmt_free_result($stmt_2);
+
+			// 关闭mysqli_stmt类
+			mysqli_stmt_close($stmt_1);
+			mysqli_stmt_close($stmt_2);
+			
+        } else {
+
+        	echo json_encode(array("success" => FALSE));
+        	
+        }
 
 	}	
-*/
+
 
 	// 拼车者主动退出当前拼车
 	public function quitCarPoolingCase() {
@@ -580,11 +632,42 @@ class CarPoolingController {
 	}
 
 
+	// 加入当前拼车
 	public function joinCarPoolingCase() {
 
+		$carPoolingID = $_REQUEST['carpool_id'];
 
+		$sql = "CASE (SELECT * FROM passenger WHERE open_id = (?)) WHEN 0 THEN (INSERT INTO passenger (carpool_id, open_id, riding_status) VALUES ((?), (?), 0)) ELSE (UPDATE passenger SET riding_status = 0 WHERE open_id = (?)) END";
 
+				// 创建预处理语句
+		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
 
+		if(mysqli_stmt_prepare($stmt, $sql)){
+
+			// 绑定参数
+			mysqli_stmt_bind_param($stmt, "is", $carPoolingID, $this->openID);
+
+			// 执行查询
+			if(!mysqli_stmt_execute($stmt)) {
+
+				echo json_encode(array("success" => FALSE));
+				return;
+			}
+
+			// 返回结果
+			echo json_encode(array("success" => TRUE));
+
+			// 释放结果
+			mysqli_stmt_free_result($stmt);
+
+			// 关闭mysqli_stmt类
+			mysqli_stmt_close($stmt);
+
+		} else {
+
+        	echo json_encode(array("success" => FALSE));
+
+        }
 
 	}
 
