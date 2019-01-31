@@ -8,6 +8,9 @@ include_once '../../lib/DBController.php';
  * 拼车人的状态：0——已参与当前拼车，1——已退出当前拼车，2——被踢出     riding_status
  *******************************************/
 
+
+error_reporting(E_ALL || ~E_NOTICE);
+
 class CarPoolingController {
 	
 	private $shcoolID;
@@ -222,8 +225,7 @@ class CarPoolingController {
 
 		$endPlace = $_GET['end_place'];
 
-		$sql = "SELECT carpool_id, nickname, avatar, estab_time, start_place, end_place, start_time, end_time, cur_num, max_num, EXISTS(SELECT * FROM passenger AS c WHERE c.carpool_id = carpool_id AND c.riding_status = 2) AS participant FROM ((SELECT * FROM carpool_case AS d WHERE d.start_place = (?) AND d.end_place = (?) AND d.carpool_status = 0 AND ((?) BETWEEN d.start_time AND d.end_time) AND ((?) <= d.max_num - d.cur_num)) AS a JOIN user AS b ON a.creator = b.open_id) WHERE carpool_id > (?) ORDER BY carpool_id LIMIT 10";
-
+		$sql = "SELECT a.carpool_id, b.nickname, b.avatar, a.estab_time, a.start_place, a.end_place, a.start_time, a.end_time, a.cur_num, a.max_num, EXISTS(SELECT * FROM passenger AS c WHERE c.carpool_id = a.carpool_id AND c.open_id = (?) AND c.riding_status = 2) AS participant FROM (SELECT * FROM carpool_case AS d WHERE d.start_place = (?) AND d.end_place = (?) AND d.carpool_status = 0 AND ((?) BETWEEN d.start_time AND d.end_time) AND ((?) <= d.max_num - d.cur_num)) AS a, user AS b WHERE a.creator = b.open_id AND ((?) NOT IN (SELECT e.open_id FROM passenger AS e WHERE e.carpool_id = a.carpool_id AND e.riding_status = 0)) AND a.carpool_id > (?) ORDER BY a.carpool_id LIMIT 10";
 
 		// 创建预处理语句
 		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
@@ -231,7 +233,7 @@ class CarPoolingController {
 		if(mysqli_stmt_prepare($stmt, $sql)){
 
 			// 绑定参数
-			mysqli_stmt_bind_param($stmt, "iisii", $startPlace, $endPlace, $ridingTime, $passengerNum, $preCaseID);
+			mysqli_stmt_bind_param($stmt, "siisisi", $this->openID, $startPlace, $endPlace, $ridingTime, $passengerNum, $this->openID, $preCaseID);
 
 			// 执行查询
 			if(!mysqli_stmt_execute($stmt)) {
@@ -615,6 +617,7 @@ class CarPoolingController {
 
 		$sql = "SELECT COUNT(*) AS num FROM passenger WHERE carpool_id = (?) AND open_id = (?)";
 
+
 		// 创建预处理语句
 		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
 
@@ -661,6 +664,8 @@ class CarPoolingController {
 
 	}
 
+
+    /*已修改*/
 	// 加入当前拼车
 	public function joinCarPoolingCase() {
 
@@ -669,7 +674,11 @@ class CarPoolingController {
 		// 检查用户是否曾经参与过此次拼车，后退出
 		$ifQuitCarpooling = $this->checkIfQuitCarpooling($carPoolingID);
 
-		$sql = '';
+		mysqli_autocommit($this->DBController->getConnObject(), FALSE);
+
+		$sql_1 = '';
+
+		$sql_2 = "UPDATE carpool_case SET cur_num = cur_num + 1 WHERE carpool_id = " . $carPoolingID;
 
 		if ($ifQuitCarpooling['success'] == FALSE) {
 
@@ -680,46 +689,32 @@ class CarPoolingController {
 
 			if ($ifQuitCarpooling['quit']) {
 
-				$sql = "UPDATE passenger SET riding_status = 0 WHERE carpool_id = (?) AND open_id = (?)";
+				$sql_1 = "UPDATE passenger SET riding_status = 0 WHERE carpool_id = " . $carPoolingID . " AND open_id = " . "'" . $this->openID . "'";
 
 			} else {
 
-				$sql = "INSERT INTO passenger (carpool_id, open_id, riding_status) VALUES ((?), (?), 0)";
-
+				$sql_1 = "INSERT INTO passenger (carpool_id, open_id, riding_status) VALUES ($carPoolingID, '$this->openID', 0)";
 			}
-
 		}
 
-		// 创建预处理语句
-		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
+		$allQuerySucceed = TRUE;
 
-		if(mysqli_stmt_prepare($stmt, $sql)){
+		mysqli_query($this->DBController->getConnObject(), $sql_1) ? NULL : $allQuerySucceed = FALSE;
+		mysqli_query($this->DBController->getConnObject(), $sql_2) ? NULL : $allQuerySucceed = FALSE;
 
-			// 绑定参数
+		if ($allQuerySucceed) {
 
-			mysqli_stmt_bind_param($stmt, "is", $carPoolingID, $this->openID);
+			mysqli_commit($this->DBController->getConnObject());
 
-			// 执行查询
-			if(!mysqli_stmt_execute($stmt)) {
-
-				echo json_encode(array("success" => FALSE));
-				return;
-			}
-
-			// 返回结果
 			echo json_encode(array("success" => TRUE));
-
-			// 释放结果
-			mysqli_stmt_free_result($stmt);
-
-			// 关闭mysqli_stmt类
-			mysqli_stmt_close($stmt);
 
 		} else {
 
-        	echo json_encode(array("success" => FALSE));
-			//echo mysqli_error($this->DBController->getConnObject());
-        }
+			mysqli_rollback($this->DBController->getConnObject());
+
+			echo json_encode(array("success" => FALSE));
+
+		}
 
 	}
 
