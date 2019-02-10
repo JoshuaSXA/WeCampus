@@ -274,49 +274,95 @@ class CarPoolingController {
         
 		$detailInfo = NULL;
 
-		$sql = "SELECT carpool_id, creator, nickname, avatar, phone, auth, estab_time, (SELECT place_name FROM pick_up_place AS m WHERE m.place_id = start_place) AS start_name, (SELECT place_name FROM pick_up_place AS n WHERE n.place_id = end_place) AS end_name, start_time, end_time, cur_num, max_num, carpool_status, CASE creator WHEN " . "'" . $this->openID . "'" . " THEN -1 ELSE (SELECT k.riding_status FROM passenger AS k WHERE k.open_id = " . "'" . $this->openID . "'" . ") END AS riding_status FROM (carpool_case JOIN user ON carpool_case.creator = user.open_id) WHERE carpool_id = " . $carPoolCaseID . ";";
+		// $sql = "SELECT carpool_id, creator, nickname, avatar, phone, auth, estab_time, (SELECT place_name FROM pick_up_place AS m WHERE m.place_id = start_place) AS start_name, (SELECT place_name FROM pick_up_place AS n WHERE n.place_id = end_place) AS end_name, start_time, end_time, cur_num, max_num, carpool_status, CASE creator WHEN " . "'" . $this->openID . "'" . " THEN -1 ELSE (SELECT k.riding_status FROM passenger AS k WHERE k.open_id = " . "'" . $this->openID . "'" . ") END AS riding_status FROM (carpool_case JOIN user ON carpool_case.creator = user.open_id) WHERE carpool_id = " . $carPoolCaseID . ";";
 
-		$sql .= "SELECT open_id, nickname, avatar, phone, auth FROM passenger NATURAL JOIN user WHERE carpool_id = " . $carPoolCaseID . " AND riding_status = 0";
+		$sql = "SELECT s.carpool_id, s.creator, s.nickname, s.avatar, s.phone, s.auth, s.estab_time, (SELECT m.place_name FROM pick_up_place m WHERE m.place_id = s.start_place) start_name, (SELECT n.place_name FROM pick_up_place n WHERE n.place_id = s.end_place) end_name, s.start_time, s.end_time, s.cur_num, s.max_num, s.carpool_status FROM (carpool_case a JOIN user b ON a.creator = b.open_id) s WHERE s.carpool_id = (?)";
 
-		if (mysqli_multi_query($this->DBController->getConnObject(), $sql)) {
+		// $sql .= "SELECT open_id, nickname, avatar, phone, auth FROM passenger NATURAL JOIN user WHERE carpool_id = " . $carPoolCaseID . " AND riding_status = 0";
 
-			do {
+		// if (mysqli_multi_query($this->DBController->getConnObject(), $sql)) {
 
-				if ($result = mysqli_store_result($this->DBController->getConnObject())) {
-					if($detailInfo == NULL){
+		// 	echo "kiding?";
+		// 	do {
+		// 		echo "heher";
 
-						$detailInfo = mysqli_fetch_all($result, MYSQLI_ASSOC);
+		// 		if ($result = mysqli_store_result($this->DBController->getConnObject())) {
+		// 			if($detailInfo == NULL){
 
-					}else{
+		// 				$detailInfo = mysqli_fetch_all($result, MYSQLI_ASSOC);
 
-						$detailInfo['passenger'] = mysqli_fetch_all($result, MYSQLI_ASSOC);
+		// 				echo json_encode($detailInfo);
 
-					}
+		// 			}else{
 
-					mysqli_free_result($result);
-				}
+		// 				$detailInfo['passenger'] = mysqli_fetch_all($result, MYSQLI_ASSOC);
 
-			} while(mysqli_next_result($this->DBController->getConnObject()));
+		// 				echo json_encode($detailInfo['passenger']);
 
-		}else{
+		// 			}
 
-			$retVal = array('success' => FALSE, 'detail' => array());
+		// 			mysqli_free_result($result);
+		// 		}
 
-		}
+		// 		echo "end";
 
-		$retVal = array('success' => TRUE, 'detail' => $detailInfo);
+		// 	} while(mysqli_next_result($this->DBController->getConnObject()));
 
-		echo json_encode($retVal,  JSON_UNESCAPED_UNICODE);
+		// }else{
+
+		// 	echo mysqli_error($this->DBController->getConnObject());
+		// 	$retVal = array('success' => FALSE, 'detail' => array());
+
+		// }
+
+		// $retVal = array('success' => TRUE, 'detail' => $detailInfo);
+
+		// echo json_encode($retVal,  JSON_UNESCAPED_UNICODE);
+
+		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
+
+		if(mysqli_stmt_prepare($stmt, $sql)){
+
+			// 绑定参数
+			mysqli_stmt_bind_param($stmt, "i", $carPoolCaseID);
+
+			// 执行查询
+			if(!mysqli_stmt_execute($stmt)) {
+
+				echo json_encode(array("success" => FALSE, "page_data" => array()));
+				return;
+			}
+
+			// 获取查询结果
+			$result = mysqli_stmt_get_result($stmt);
+
+			// 获取值
+			$retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);
+
+			// 返回结果
+			echo json_encode(array("success" => TRUE, "page_data" => $retValue), JSON_UNESCAPED_UNICODE);
+
+			// 释放结果
+			mysqli_stmt_free_result($stmt);
+
+			// 关闭mysqli_stmt类
+			mysqli_stmt_close($stmt);
+
+		} else {
+			echo mysqli_error($this->DBController->getConnObject());
+        	//echo json_encode(array("success" => FALSE, "page_data" => array()));
+
+        }
 	}
 
 
 	/*已修改*/
-	// 查询我的历史拼车记录，注意这里需要分页查询
-	public function getMyCarPoolingHistory() {
+	// 查询我的历史拼车记录，注意这里需要分页查询，即将开始的拼车
+	public function getCarPoolingToStart() {
 
-		$preCaseID = $_GET['page_border'];
+		$preTimeBound = $_GET['page_border'];
 
-		$sql = "SELECT * FROM ((SELECT * FROM carpool_case a WHERE a.creator = (?)) UNION (SELECT * FROM carpool_case b WHERE (?) IN (SELECT c.open_id FROM passenger c WHERE c.carpool_id = b.carpool_id))) AS s WHERE s.carpool_id < (?) ORDER BY s.carpool_id DESC";
+		$sql = "SELECT s.carpool_id, s.creator, s.estab_time, (SELECT place_name FROM pick_up_place m WHERE m.place_id=s.start_place) AS start_name, (SELECT place_name FROM pick_up_place n WHERE n.place_id=s.end_place) AS end_name, s.start_time, s.end_time, s.cur_num, s.max_num, s.carpool_status, CASE s.creator WHEN (?) THEN 0 ELSE (SELECT k.riding_status FROM passenger k WHERE k.carpool_id = s.carpool_id AND k.open_id=(?)) END AS riding_status FROM ((SELECT * FROM carpool_case a WHERE a.creator = (?)) UNION (SELECT * FROM carpool_case b WHERE (?) IN (SELECT c.open_id FROM passenger c WHERE c.carpool_id = b.carpool_id))) AS s WHERE s.start_time >= (?) ORDER BY s.start_time ASC";
 
 		// 创建预处理语句
 		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
@@ -324,7 +370,7 @@ class CarPoolingController {
 		if(mysqli_stmt_prepare($stmt, $sql)){
 
 			// 绑定参数
-			mysqli_stmt_bind_param($stmt, "ssi", $this->openID, $this->openID, $preCaseID);
+			mysqli_stmt_bind_param($stmt, "sssss", $this->openID, $this->openID, $this->openID, $this->openID, $preTimeBound);
 
 			// 执行查询
 			if(!mysqli_stmt_execute($stmt)) {
@@ -355,6 +401,54 @@ class CarPoolingController {
         }
 
 	}
+
+
+	// 查询我的历史拼车记录，注意这里需要分页查询，已经结束的拼车
+	public function getEndedCarPoolingHistory() {
+
+		$preTimeBound = $_GET['page_border'];
+
+		$sql = "SELECT s.carpool_id, s.creator, s.estab_time, (SELECT place_name FROM pick_up_place m WHERE m.place_id=s.start_place) AS start_name, (SELECT place_name FROM pick_up_place n WHERE n.place_id=s.end_place) AS end_name, s.start_time, s.end_time, s.cur_num, s.max_num, s.carpool_status, CASE s.creator WHEN (?) THEN 0 ELSE (SELECT k.riding_status FROM passenger k WHERE k.carpool_id = s.carpool_id AND k.open_id=(?)) END AS riding_status FROM ((SELECT * FROM carpool_case a WHERE a.creator = (?)) UNION (SELECT * FROM carpool_case b WHERE (?) IN (SELECT c.open_id FROM passenger c WHERE c.carpool_id = b.carpool_id))) AS s WHERE s.start_time < (?) ORDER BY s.start_time DESC";
+
+		// 创建预处理语句
+		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
+
+		if(mysqli_stmt_prepare($stmt, $sql)){
+
+			// 绑定参数
+			mysqli_stmt_bind_param($stmt, "sssss", $this->openID, $this->openID, $this->openID, $this->openID, $preTimeBound);
+
+			// 执行查询
+			if(!mysqli_stmt_execute($stmt)) {
+
+				echo json_encode(array("success" => FALSE, "page_data" => array()));
+				return;
+			}
+
+			// 获取查询结果
+			$result = mysqli_stmt_get_result($stmt);
+
+			// 获取值
+			$retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);
+
+			// 返回结果
+			echo json_encode(array("success" => TRUE, "page_data" => $retValue), JSON_UNESCAPED_UNICODE);
+
+			// 释放结果
+			mysqli_stmt_free_result($stmt);
+
+			// 关闭mysqli_stmt类
+			mysqli_stmt_close($stmt);
+
+		} else {
+			echo mysqli_error($this->DBController->getConnObject());
+        	//echo json_encode(array("success" => FALSE, "page_data" => array()));
+
+        }
+
+	}
+
+
 
 
 	// 返回认证信息
