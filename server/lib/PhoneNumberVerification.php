@@ -49,7 +49,7 @@ class PhoneNumberVerificationController {
 			// 今日用户已经验证过
 			if ((int)$retVal > 5) {
 
-				echo json_encode(array("success"=>FALSE, "time_exceeded"=>TRUE));
+				echo json_encode(array("success"=>FALSE, "time_exceeded"=>TRUE, "err_code"=>-1));
 
 				return;
 
@@ -84,13 +84,13 @@ class PhoneNumberVerificationController {
     		$rsp = json_decode($result, TRUE);
 
     		if($rsp["result"] != 0) {
-    			echo json_encode(array("success"=>FALSE, "time_exceeded"=>FALSE));
+    			echo json_encode(array("success"=>FALSE, "time_exceeded"=>FALSE, "err_code"=>$rsp["result"]));
     			return;
     		}
     		
 		} catch(\Exception $e) {
     		//echo var_dump($e);
-    		echo json_encode(array("success"=>FALSE, "time_exceeded"=>FALSE));
+    		echo json_encode(array("success"=>FALSE, "time_exceeded"=>FALSE, "err_code"=>-1));
     		return;
 		}
 
@@ -99,7 +99,7 @@ class PhoneNumberVerificationController {
 		// 存入redis缓存
 		$this->redis->setex($this->openID, (int)$smsValidTime * 60, $storedHash);
 
-		echo json_encode(array("success"=>TRUE, "time_exceeded"=>FALSE));
+		echo json_encode(array("success"=>TRUE, "time_exceeded"=>FALSE, "err_code"=>0));
 
 	}
 
