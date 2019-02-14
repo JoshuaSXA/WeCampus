@@ -266,6 +266,70 @@ class CarPoolingController {
 	}
 
 
+	// 扩展时间段后的查询，注意这里需要分页查询
+	public function getExpandedCarPoolingCaseList() {
+
+		// 这里需要提供case_id作为threshhold，初始化为0
+		$preCaseID = $_GET['page_border'];
+
+		$passengerNum = $_GET['passenger_num'];
+
+		$ridingTime = $_GET['riding_time'];
+
+		$timeSpan = $_GET['time_span'];
+
+		$startPlace = $_GET['start_place'];
+
+		$endPlace = $_GET['end_place'];
+
+
+		// 根据范围计算时间
+		$minTime = date('Y-m-d H:i:s', strtotime($ridingTime . ' - ' . (string)$timeSpan . ' hours'));
+
+		$maxTime = date('Y-m-d H:i:s', strtotime($ridingTime . ' + ' . (string)$timeSpan . ' hours'));
+
+
+		$sql = "SELECT a.carpool_id, b.nickname, b.avatar, a.estab_time, a.start_place, a.end_place, a.start_time, a.end_time, a.cur_num, a.max_num, EXISTS(SELECT * FROM passenger AS c WHERE c.carpool_id = a.carpool_id AND c.open_id = (?) AND c.riding_status = 2) AS participant FROM (SELECT * FROM carpool_case AS d WHERE d.start_place = (?) AND d.end_place = (?) AND d.carpool_status = 0 AND (d.start_time BETWEEN (?) AND (?)) AND ((?) <= d.max_num - d.cur_num)) AS a, user AS b WHERE a.creator = b.open_id AND ((?) NOT IN (SELECT e.open_id FROM passenger AS e WHERE e.carpool_id = a.carpool_id AND e.riding_status = 0)) AND a.carpool_id > (?) ORDER BY a.carpool_id LIMIT 10";
+
+		// 创建预处理语句
+		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
+
+		if(mysqli_stmt_prepare($stmt, $sql)){
+
+			// 绑定参数
+			mysqli_stmt_bind_param($stmt, "siissisi", $this->openID, $startPlace, $endPlace, $minTime, $maxTime, $passengerNum, $this->openID, $preCaseID);
+
+			// 执行查询
+			if(!mysqli_stmt_execute($stmt)) {
+
+				echo json_encode(array("success" => FALSE, "page_data" => array()));
+				return;
+			}
+
+			// 获取查询结果
+			$result = mysqli_stmt_get_result($stmt);
+
+			// 获取值
+			$retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);
+
+			// 返回结果
+			echo json_encode(array("success" => TRUE, "page_data" => $retValue), JSON_UNESCAPED_UNICODE);
+
+			// 释放结果
+			mysqli_stmt_free_result($stmt);
+
+			// 关闭mysqli_stmt类
+			mysqli_stmt_close($stmt);
+
+		} else {
+
+        	//echo json_encode(array("success" => FALSE, "page_data" => array()));
+        	echo mysqli_error($this->DBController->getConnObject());
+
+        }
+	}
+
+
 	/*已修改*/
 	// 查询拼车和我的拼车的二级页面，拼车详情
 	public function getCarPoolDetail() {
@@ -274,7 +338,7 @@ class CarPoolingController {
         
 		$detailInfo = NULL;
 
-		$sql = "SELECT carpool_id, creator, nickname, avatar, phone, auth, estab_time, start_time, end_time, cur_num, max_num, carpool_status, (SELECT place_name FROM pick_up_place AS m WHERE m.place_id = start_place) AS start_name, (SELECT place_name FROM pick_up_place AS n WHERE n.place_id = end_place) AS end_name, CASE creator WHEN " . "'" . $this->openID . "'" . " THEN 0 ELSE (SELECT k.riding_status FROM passenger k WHERE k.open_id = " . "'" . $this->openID . "'" . " AND k.carpool_id=" . $carPoolCaseID . ") END AS riding_status FROM carpool_case a JOIN user b ON a.creator = b.open_id WHERE carpool_id = " . $carPoolCaseID . ";";
+		$sql = "SELECT carpool_id, creator, nickname, avatar, phone, auth, estab_time, start_time, end_time, cur_num, max_num, carpool_status, tip, (SELECT place_name FROM pick_up_place AS m WHERE m.place_id = start_place) AS start_name, (SELECT place_name FROM pick_up_place AS n WHERE n.place_id = end_place) AS end_name, CASE creator WHEN " . "'" . $this->openID . "'" . " THEN 0 ELSE (SELECT k.riding_status FROM passenger k WHERE k.open_id = " . "'" . $this->openID . "'" . " AND k.carpool_id=" . $carPoolCaseID . ") END AS riding_status FROM carpool_case a JOIN user b ON a.creator = b.open_id WHERE carpool_id = " . $carPoolCaseID . ";";
 
 		$sql .= "SELECT open_id, nickname, avatar, phone, auth FROM passenger NATURAL JOIN user WHERE carpool_id = " . $carPoolCaseID . " AND riding_status = 0";
 
@@ -311,6 +375,8 @@ class CarPoolingController {
 		echo json_encode($retVal,  JSON_UNESCAPED_UNICODE);
 
 	}
+
+
 
 
 	/*已修改*/
@@ -742,6 +808,14 @@ class CarPoolingController {
 		}
 
 	}
+
+
+	// 获取某个拼车case的乘客列表
+	
+
+
+
+
 
 }
 
