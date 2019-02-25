@@ -151,6 +151,9 @@ class CarPoolingController {
 		$curNum = $_REQUEST['cur_num'];
 		// 最大拼车人数
 		$maxNum = $_REQUEST['max_num'];
+		// 拼车的tip
+		$tip = $_REQUEST['tip'];
+
 
 		// 首先要检查是否与现有拼车产生冲突
 		$checkCollision = $this->checkCarPoolingCollision($startTime, $endTime);
@@ -175,14 +178,14 @@ class CarPoolingController {
 
 		// 发起一个新的拼车时，默认case的状态是0，即正在拼车
 
-		$sql = "INSERT INTO carpool_case (creator, estab_time, start_place, end_place, start_time, end_time, cur_num, max_num) VALUES((?), NOW(), (?), (?), (?), (?), (?), (?))";
+		$sql = "INSERT INTO carpool_case (creator, estab_time, start_place, end_place, start_time, end_time, cur_num, max_num, tip) VALUES((?), NOW(), (?), (?), (?), (?), (?), (?), (?))";
 
 		$stmt = mysqli_stmt_init($this->DBController->getConnObject());
         
         if(mysqli_stmt_prepare($stmt, $sql)){
 
 			// 绑定参数
-			mysqli_stmt_bind_param($stmt, "siissii", $this->openID, $startPlace, $endPlace, $startTime, $endTime, $curNum, $maxNum);   
+			mysqli_stmt_bind_param($stmt, "siissiis", $this->openID, $startPlace, $endPlace, $startTime, $endTime, $curNum, $maxNum, $tip);   
 
 			// 执行查询
 			if(!mysqli_stmt_execute($stmt)){
@@ -283,11 +286,16 @@ class CarPoolingController {
 		$endPlace = $_GET['end_place'];
 
 
+		// 当前系统时间
+		$curUnixTime = time();
+		$minUnixTime = max(strtotime($ridingTime . ' - ' . (string)$timeSpan . ' hours'), $curUnixTime);
+		$maxUnixTime = max(strtotime($ridingTime . ' + ' . (string)$timeSpan . ' hours'), $minUnixTime);
+
 		// 根据范围计算时间
-		$minTime = date('Y-m-d H:i:s', strtotime($ridingTime . ' - ' . (string)$timeSpan . ' hours'));
 
-		$maxTime = date('Y-m-d H:i:s', strtotime($ridingTime . ' + ' . (string)$timeSpan . ' hours'));
+		$minTime = date('Y-m-d H:i:s', $minUnixTime);
 
+		$maxTime = date('Y-m-d H:i:s', $maxUnixTime);
 
 		$sql = "SELECT a.carpool_id, b.nickname, b.avatar, a.estab_time, a.start_place, a.end_place, a.start_time, a.end_time, a.cur_num, a.max_num, EXISTS(SELECT * FROM passenger AS c WHERE c.carpool_id = a.carpool_id AND c.open_id = (?) AND c.riding_status = 2) AS participant FROM (SELECT * FROM carpool_case AS d WHERE d.start_place = (?) AND d.end_place = (?) AND d.carpool_status = 0 AND (d.start_time BETWEEN (?) AND (?)) AND ((?) <= d.max_num - d.cur_num)) AS a, user AS b WHERE a.creator = b.open_id AND ((?) NOT IN (SELECT e.open_id FROM passenger AS e WHERE e.carpool_id = a.carpool_id AND e.riding_status = 0)) AND a.carpool_id > (?) ORDER BY a.carpool_id LIMIT 10";
 
@@ -809,13 +817,51 @@ class CarPoolingController {
 
 	}
 
+	public function getRelevantUserList() {
 
-	// 获取某个拼车case的乘客列表
-	
+		$carPoolingID = $_GET['carpool_id'];
+
+		$sql = "SELECT a.creator as open_id, b.avatar, b.nickname FROM carpool_case a INNER JOIN user b ON a.creator = b.open_id WHERE a.carpool_id = " . $carPoolingID . ";";
+
+		$sql .= "SELECT open_id, riding_status, avatar, nickname FROM passenger NATURAL JOIN user WHERE carpool_id = " . $carPoolingID;
+
+		$retData = array("creator" => NULL, "passenger" => NULL);
 
 
+		if (mysqli_multi_query($this->DBController->getConnObject(), $sql)) {
+
+			do {
+
+				if ($result = mysqli_store_result($this->DBController->getConnObject())) {
+
+					if($retData['creator'] == NULL){
+
+						$retData['creator'] = mysqli_fetch_all($result, MYSQLI_ASSOC);
 
 
+					}else{
+
+						$retData['passenger'] = mysqli_fetch_all($result, MYSQLI_ASSOC);
+
+					}
+
+					mysqli_free_result($result);
+				}
+
+			} while(mysqli_next_result($this->DBController->getConnObject()));
+
+		}else{
+
+			echo mysqli_error($this->DBController->getConnObject());
+			$retVal = array('success' => FALSE, 'detail' => array());
+
+		}
+
+		$retVal = array('success' => TRUE, 'detail' => $retData);
+
+		echo json_encode($retVal,  JSON_UNESCAPED_UNICODE);
+
+	}
 
 }
 
