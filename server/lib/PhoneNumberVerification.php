@@ -106,7 +106,7 @@ class PhoneNumberVerificationController {
 
 	private function updateUserPhoneNumber($openID, $phoneNumber) {
 
-		$sql = "UPDATE user SET phone = (?), auth = 1 WHERE open_id = (?)";
+		$sql = "UPDATE user SET phone = (?) WHERE open_id = (?)";
 
 		// 创建预处理语句
 		$stmt = mysqli_stmt_init($this->DBController->getConnObject());

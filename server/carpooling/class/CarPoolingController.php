@@ -823,7 +823,7 @@ class CarPoolingController {
 
 		$sql = "SELECT a.creator as open_id, b.avatar, b.nickname FROM carpool_case a INNER JOIN user b ON a.creator = b.open_id WHERE a.carpool_id = " . $carPoolingID . ";";
 
-		$sql .= "SELECT open_id, riding_status, avatar, nickname FROM passenger NATURAL JOIN user WHERE carpool_id = " . $carPoolingID;
+		$sql .= "SELECT open_id, riding_status, avatar, nickname FROM passenger NATURAL JOIN user WHERE carpool_id = " . $carPoolingID . " AND NOT open_id = " . "'" . $this->openID . "'";
 
 		$retData = array("creator" => NULL, "passenger" => NULL);
 
