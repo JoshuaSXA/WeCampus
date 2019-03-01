@@ -271,7 +271,14 @@ class CardSeekingController
 
         $pageBorder = $_GET['page_border'];
 
-        $sql = "SELECT a.case_id, a.finder, a.lost_place, a.lost_time, a.phone_call, a.case_status, b.avatar, b.nickname FROM cardseeking_case a INNER JOIN user b ON a.finder = b.open_id WHERE a.student_id in (SELECT s.student_id FROM user s WHERE s.open_id=(?)) AND a.case_id>(?) ORDER BY a.case_id ASC LIMIT 10";
+        // 初始化设置page_border的值为最大值
+        if($pageBorder == -1) {
+
+            $pageBorder = 4294967294;
+
+        }
+
+        $sql = "SELECT a.case_id, a.finder, a.lost_place, a.lost_time, a.phone_call, a.case_status, b.avatar, b.nickname FROM cardseeking_case a INNER JOIN user b ON a.finder = b.open_id WHERE a.student_id in (SELECT s.student_id FROM user s WHERE s.open_id=(?) AND auth=1) AND a.case_id<(?) ORDER BY a.case_id DESC LIMIT 10";
 
         // 创建预处理语句
         $stmt = mysqli_stmt_init($this->DBController->getConnObject());
@@ -359,7 +366,7 @@ class CardSeekingController
 
         $caseID = $_GET['case_id'];
 
-        $sql = "SELECT a.finder, a.lost_place, a.lost_time, a.card_image, a.phone_call, a.case_status, b.phone, b.nickname, b.avatar FROM cardseeking_case a INNER JOIN user b ON a.finder = b.open_id WHERE a.case_id=(?)";
+        $sql = "SELECT a.finder, a.student_id, a.student_name, a.lost_place, a.lost_time, a.card_image, a.phone_call, a.case_status, b.phone, b.nickname, b.avatar FROM cardseeking_case a INNER JOIN user b ON a.finder = b.open_id WHERE a.case_id=(?)";
 
         // 创建预处理语句
         $stmt = mysqli_stmt_init($this->DBController->getConnObject());
@@ -395,6 +402,96 @@ class CardSeekingController
         } else {
 
             echo json_encode(array("success" => FALSE, "detail" => array()));
+
+        }
+
+    }
+
+    // 初始化 获取用户未读信息的个数
+    public function getUncheckedMessageNum(){
+
+        $sql = "SELECT COUNT(*) AS num FROM cardseeking_case a WHERE a.school_id=(?) AND a.case_status=0 AND a.student_id in (SELECT b.student_id FROM user b WHERE b.open_id=(?) AND b.auth=1)";
+
+        // 创建预处理语句
+        $stmt = mysqli_stmt_init($this->DBController->getConnObject());
+
+        if(mysqli_stmt_prepare($stmt, $sql)){
+
+            // 绑定参数
+            mysqli_stmt_bind_param($stmt, "is", $this->schoolID, $this->openID);
+
+            // 执行查询
+            if(!mysqli_stmt_execute($stmt)) {
+
+                echo json_encode(array("success" => FALSE, "message_num" => 0));
+
+                return;
+
+            }
+
+            // 获取查询结果
+            $result = mysqli_stmt_get_result($stmt);
+
+            // 获取值
+            $retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);
+
+            // 返回结果
+            echo json_encode(array("success" => TRUE, "message_num" => $retValue[0]['num']));
+
+
+            // 释放结果
+            mysqli_stmt_free_result($stmt);
+
+            // 关闭mysqli_stmt类
+            mysqli_stmt_close($stmt);
+
+        } else {
+
+            echo json_encode(array("success" => FALSE, "message_num" => 0));
+
+        }
+
+    }
+
+    // 初始化 获取用户捡到他人卡的次数，被捡到卡的次数，捡到卡且已经被感谢的次数
+    public function getUserInitialInfo() {
+
+        $sql = "SELECT (SELECT COUNT(*) FROM cardseeking_case a WHERE a.finder=(?)) AS find_time, (SELECT COUNT(*) FROM cardseeking_case b INNER JOIN user c ON b.student_id=c.student_id WHERE c.auth=1 AND c.open_id=(?)) AS found_time, (SELECT COUNT(*) FROM cardseeking_case d WHERE d.finder=(?) AND d.case_status=2) AS finish_time";
+
+        // 创建预处理语句
+        $stmt = mysqli_stmt_init($this->DBController->getConnObject());
+
+        if(mysqli_stmt_prepare($stmt, $sql)){
+
+            // 绑定参数
+            mysqli_stmt_bind_param($stmt, "sss", $this->openID, $this->openID, $this->openID);
+
+            // 执行查询
+            if(!mysqli_stmt_execute($stmt)) {
+
+                echo json_encode(array("success" => FALSE, "info" => array()));
+                return;
+
+            }
+
+            // 获取查询结果
+            $result = mysqli_stmt_get_result($stmt);
+
+            // 获取值
+            $retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);
+
+            // 返回结果
+            echo json_encode(array("success" => TRUE, "info" => $retValue[0]));
+
+            // 释放结果
+            mysqli_stmt_free_result($stmt);
+
+            // 关闭mysqli_stmt类
+            mysqli_stmt_close($stmt);
+
+        } else {
+
+            echo json_encode(array("success" => FALSE, "info" => array()));
 
         }
 
