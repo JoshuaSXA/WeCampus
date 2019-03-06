@@ -16,7 +16,7 @@ class FormidPoolController
     private $formIdPoolKey;
 
     // 单条formId 的过期时间，六天半
-    private $expireTime = (int) (6.5 * 24 * 3600);
+    private $expireTime = 7 * 24 * 3600 - 3600;
 
     private $redis;
 
@@ -45,9 +45,9 @@ class FormidPoolController
     // 获取当前formId存储池中可用的form_id个数
     public function getAvailFormIdLen() {
 
-        $formIdPoolSize = $this->redis->lLen($this->formIdPoolKey);
+        $formIdPoolSize = $this->redis->llen($this->formIdPoolKey);
 
-        $formIdKeyList = $this->redis->lRange($this->formIdPoolKey, 0, $formIdPoolSize - 1);
+        $formIdKeyList = $this->redis->lrange($this->formIdPoolKey, 0, $formIdPoolSize - 1);
 
         $invalidFormIdCounter = 0;
 
@@ -71,13 +71,15 @@ class FormidPoolController
     // 获取一个可用的form_id
     public function getFormId() {
 
-        while ($this->redis->lLen($this->formIdPoolKey)) {
+        while ($this->redis->llen($this->formIdPoolKey)) {
 
             $formIdKey = $this->redis->rpop($this->formIdPoolKey);
 
             $formId = $this->redis->get($formIdKey);
 
             if($formId) {
+
+                $this->redis->del($formIdKey);
 
                 return $formId;
 
@@ -98,7 +100,7 @@ class FormidPoolController
 
         $this->redis->setex($formIdKey, $this->expireTime, $formId);
 
-        return $this->redis->lpushx($this->formIdPoolKey, $formIdKey);
+        return $this->redis->lpush($this->formIdPoolKey, $formIdKey);
 
     }
 

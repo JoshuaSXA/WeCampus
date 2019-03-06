@@ -12,10 +12,19 @@ $openID = $_REQUEST['open_id'];
 
 $formID = $_REQUEST['form_id'];
 
-$moduleTag = $_REQUEST['module_tag'];
+# $moduleTag = $_REQUEST['module_tag'];
+$module_tag = "formId";
+
+$formIDList = explode(",",$formID);
 
 $formIdPoolControllerObj = new FormidPoolController($moduleTag, $openID);
 
-$formIdPoolControllerObj->addFormId($formID);
+
+for($i = 0; $i < count($formIDList); ++$i){
+
+	$formIdPoolControllerObj->addFormId($formID);
+	
+}
+
 
 echo json_encode(array("success" => TRUE));
