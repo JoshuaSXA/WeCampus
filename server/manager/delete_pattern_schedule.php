@@ -1,6 +1,6 @@
 <?php
 
-include_once '../server/lib/DBController.php';
+include_once '../lib/DBController.php';
 
 $DBController = new DBController();
 
@@ -18,6 +18,7 @@ if($retVal) {
 	echo "delete succeeded!";
 
 } else {
+	//echo $DBController->getErrorCode();
 	echo "delete failed!";
 }
 

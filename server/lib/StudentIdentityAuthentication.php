@@ -42,6 +42,8 @@ class StudentIdentityAuthentication {
 
 		$studentID = $_REQUEST['student_id'];
 
+		echo $studentID;
+
 		// 实例化图片上传类
 		$uploadImageControllerObj = new UploadImageController();
 

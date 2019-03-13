@@ -1,7 +1,8 @@
 <?php
 include_once '../../lib/DBController.php';
 include_once '../../lib/UploadImageController.php';
-
+include_once '../../lib/TemplateMessageController.php';
+include_once '../../lib/FormidPoolController.php';
 
 /**
  * Created by PhpStorm.
@@ -61,7 +62,7 @@ class CardSeekingController
     // 检查该失主是否在已注册用户中，且认证状态=1
     private function checkIfOwnerExists($ownerCardID) {
 
-        $sql = "SELECT avatar, nickname FROM user WHERE school_id=(?) AND student_id=(?) AND auth=1";
+        $sql = "SELECT avatar, nickname, open_id FROM user WHERE school_id=(?) AND student_id=(?) AND auth=1";
 
         // 创建预处理语句
         $stmt = mysqli_stmt_init($this->DBController->getConnObject());
@@ -106,6 +107,90 @@ class CardSeekingController
             return array("success" => FALSE, "exists" => FALSE, "owner_info" => array());
 
         }
+
+    }
+
+
+    // 向失主发送模板消息
+    private function sendLoserTemplateMessage($ownerCardId, $detail) {
+
+        $redis = new Redis();
+
+        $redis->connect('127.0.0.1', 6379, 10);
+
+        $cardSeekingKey = $this->schoolID . "_" . $ownerCardId;
+
+        $retVal = $redis->get($cardSeekingKey);
+
+        if ($retVal) {
+
+            return array("success" => TRUE, "exists" => TRUE);
+
+        } else {
+
+            $checkRes = $this->checkIfOwnerExists($ownerCardId);
+
+            if(!$checkRes["success"]) {
+
+                return array("success" => FALSE, "exists" => FALSE);
+
+            }
+
+            if(!$checkRes["exists"]) {
+
+                return array("success" => TRUE, "exists" => FALSE);
+
+            }
+
+            $ownerOpenID = $checkRes["owner_info"]["open_id"];
+
+            $formIdPoolControllerObj = new FormidPoolController("formId", $ownerOpenID);
+
+            $formID = $formIdPoolControllerObj->getFormId();
+
+            if(!$formID) {
+
+                return array("success" => FALSE, "exists" => TRUE);
+
+            }
+
+            $jumpPage = "pages/functionalPages/index/index";
+            
+            $keyword2 = "有人在" . $detail['lost_place'] . "捡到了你的校园卡喏~ 赶紧去微校高校生活-卡丢了看看吧";
+
+            $templateMessageData = array(
+                'openid' => $ownerOpenID,
+                'template_id' => "3WNb1KROWstAN9-cNilbBLU15O3kxRHw7IrWcrim2ic",
+                'form_id' => $formID,
+                'page' => $jumpPage,
+                'data' => array(
+                    'keyword1' => array("value" => $detail['lost_time']),
+                    'keyword2' => array("value" => $keyword2),
+                ),
+                'emphasis_keyword' => ""
+            );
+
+            $templateMessageControllerObj = new TemplateMessageController($templateMessageData);
+
+            if(!$templateMessageControllerObj->sendTemplateMessage()) {
+
+                return array("success" => FALSE, "exists" => TRUE);
+
+            }
+
+            // 今日用户还未被找到卡
+            $redis->set($cardSeekingKey, "yes");
+            // 设置过期时间
+            $expireTime = mktime(23, 59, 59, date("m"), date("d"), date("Y"));
+            // 设置键的过期时间
+            $redis->expireAt($cardSeekingKey, $expireTime);
+
+            return array("success" => TRUE, "exists" => TRUE);
+
+        }
+
+
+        $redis->close();
 
     }
 
@@ -162,7 +247,7 @@ class CardSeekingController
             // 查询成功，返回结果
             echo json_encode(array("success" => TRUE, "owner_exists" => $ownerExists, "owner_info" => $ownerInfo), JSON_UNESCAPED_UNICODE);
 
-
+            $this->sendLoserTemplateMessage($ownerCardID, array("lost_time" => $lostTime, "lost_place" => $lostPlace));
 
             // 释放结果
             mysqli_stmt_free_result($stmt);
@@ -177,8 +262,6 @@ class CardSeekingController
             echo json_encode(array("success" => FALSE, "owner_exists" => $ownerExists, "owner_info" => $ownerInfo));
 
         }
-
-
 
     }
 

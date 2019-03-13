@@ -13,7 +13,7 @@ $openID = $_REQUEST['open_id'];
 $formID = $_REQUEST['form_id'];
 
 # $moduleTag = $_REQUEST['module_tag'];
-$module_tag = "formId";
+$moduleTag = "formId";
 
 $formIDList = explode(",",$formID);
 

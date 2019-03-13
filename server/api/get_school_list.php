@@ -12,5 +12,4 @@ $userInfoControllerObj = new UserInfoController();
 
 $userInfoControllerObj->getSchoolList();
 
-
 ?>

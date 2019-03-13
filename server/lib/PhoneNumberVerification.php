@@ -44,10 +44,9 @@ class PhoneNumberVerificationController {
 		$retVal = $this->redis->get($timesIndex);
 
 		if($retVal) {
-			
 
 			// 今日用户已经验证过
-			if ((int)$retVal > 5) {
+			if ((int)$retVal > 4) {
 
 				echo json_encode(array("success"=>FALSE, "time_exceeded"=>TRUE, "err_code"=>-1));
 

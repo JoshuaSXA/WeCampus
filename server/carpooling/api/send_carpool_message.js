@@ -4,6 +4,7 @@
  * 定时从数据库中查询数据数据
  *
  *************************/
+
 // 定义全局变量
 
 // 模板消息ID列表
@@ -17,8 +18,6 @@ var jumpUrlList = {
     "carseek" : "pages/functionalPages/index",
 }
 
-var carpoolMessage = "您参与/发起的拼车状态已更新，点击进入微校高校生活查看详情";
-
 // 加载日志模块
 var log4js = require('log4js');
 
@@ -27,7 +26,7 @@ log4js.configure({
     appenders: {
         xcLogFile: {
             type: "dateFile",
-            filename: __dirname +'/logs/template_message/LogFile',//
+            filename: __dirname +'/logs/LogFile',//
             alwaysIncludePattern: true,
             pattern: "-yyyy-MM-dd.log",
             encoding: 'utf-8',//default "utf-8"，文件的编码
@@ -103,14 +102,12 @@ var schedule = require('node-schedule');
 var rule = new schedule.RecurrenceRule();
 
 // 每天晚上21点发消息推送
-var hours = [21];
+var hours = [0, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
 rule.hour = hours;
 
 schedule.scheduleJob(rule, function(){
 
     var time = sd.format(new Date(), 'YYYY-MM-DD HH:mm');
-
-    console.log(time);
 
     connection.query('SELECT * FROM template_message WHERE send_time = ' + "'" + time + "'", function (error, results, fields) {
 
@@ -125,31 +122,19 @@ schedule.scheduleJob(rule, function(){
 
             if(access_token == null) {
 
-                logger.error("Get access_token failed!");
+                console.log("none access_token");
                 return;
             }
 
-            var data;
-
             // 遍历结果
             for(var i = 0; i < results.length; ++i) {
-
-                data = results[i]
-
-                $formIdPoolKey = "formId_" + data.open_id;
+                
+                $formIdPoolKey = results[i].module_tag + "_" + results[i].open_id;
 
                 getUserFormId(client, $formIdPoolKey, function (form_id) {
 
-                    if(form_id == null) {
-
-                        logger.warn(data.module_tag + " : Not enough formID for " + data.open_id);
-
-                        return;
-
-                    }
-
                     // 发送模板消息
-                    sendTemplateMessage(data, form_id, access_token);
+                    sendTemplateMessage(results[i], form_id, access_token);
 
                 })
 
@@ -165,10 +150,10 @@ schedule.scheduleJob(rule, function(){
 
 function sendTemplateMessage(data, form_id, access_token) {
 
-
+    
     // 拼接URL，作为小程序跳转时的参数传递
     var transferPage = jumpUrlList[data.module_tag] + "?id=" + data.id;
-
+    
     var postData = {
 
         "touser" : data.open_id,
@@ -191,14 +176,14 @@ function sendTemplateMessage(data, form_id, access_token) {
                 "value": data.keyword_3
             } ,
             "keyword4": {
-                "value": (data.module_tag == "carpool" ? carpoolMessage : data.keyword_4)
+                "value": data.keyword_4
             },
             "keyword5": {
                 "value": data.keyword_5
             }
         },
 
-
+        // "emphasis_keyword": "keyword5.DATA"
     }
 
 
@@ -217,12 +202,12 @@ function sendTemplateMessage(data, form_id, access_token) {
 
         if (!error && response.statusCode == 200) {
 
-            logger.info(data.module_tag + " : Template message sending succeeded!");
+            logger.info("Success!");
 
         } else {
 
             // 输出错误日志
-            logger.error(data.module_tag + " : Template message sending failed for " + data.open_id);
+            logger.error("Template message request error!");
         }
 
     });
@@ -327,7 +312,6 @@ function getUserFormId(redis_client, formIdPoolKey, callback) {
 
                 if(res) {
 
-                    redis_client.del(value);
                     callback(res);
 
                 } else {
@@ -338,7 +322,6 @@ function getUserFormId(redis_client, formIdPoolKey, callback) {
             });
 
         } else {
-
             callback(null);
         }
 

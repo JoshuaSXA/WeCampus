@@ -74,6 +74,7 @@ class UploadImageController {
             // 获取图片的临时存储路径
             $tempPath = $_FILES[$imgUploadName]['tmp_name'];
 
+
             // 文件的保存完整路径
             $imgPath = $this->savePath . $imgName;
 
@@ -90,17 +91,18 @@ class UploadImageController {
     // 从临时路径保存到本地文件
     private function transferTempImage($imgSrc, $imgDst) {
 
-        // 获得图片的长宽和类型
-        list($width,$height,$type)=getimagesize($imgSrc);
+        move_uploaded_file($imgSrc, $imgDst);
 
-        // 设置图片类型
-        header('Content-Type:image/png');
+        return;
+
+        // 获得图片的长宽和类型
+        list($width,$height,$type)=getimagesize($imgDst);
 
         // 获取新的画布
         $imageWp=imagecreatetruecolor($width, $height);
 
         // 创建临时图片
-        $image = imagecreatefrompng($imgSrc);
+        $image = imagecreatefromjpeg($imgDst);
 
         // 复制图片到画布
         imagecopyresampled($imageWp, $image, 0, 0, 0, 0, $width, $height, $width, $height);
@@ -116,7 +118,5 @@ class UploadImageController {
 
 
 }
-
-
 
 ?>

@@ -65,7 +65,7 @@ class TokenController
 
 		$url = 'https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=' . $appID . '&secret=' . $secret;
 
-		$this->curlRequestControllerObj = new CurlRequsetController();
+		$this->curlRequestControllerObj = new CurlRequestController();
 
 		if($this->curlRequestControllerObj->curlGetInformation($url)) {
 			// 获取GET的返回值

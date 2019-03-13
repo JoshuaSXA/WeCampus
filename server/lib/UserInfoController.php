@@ -58,7 +58,8 @@ class UserInfoController {
 	// 用户注册
 	public function userRegister() {
 
-		$this->schoolID = $_REQUEST['school_id'];
+		# $this->schoolID = $_REQUEST['school_id'];
+		$this->schoolID = 1;
 
 		$this->nickname = $_REQUEST['nickname'];
 

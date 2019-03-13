@@ -16,6 +16,7 @@ $code2SessionControllerObj = new Code2SessionController();
 // 调用getSessionByCode()方法
 $retVal = $code2SessionControllerObj->getSessionByCode();
 
+
 $retVal = json_decode(json_encode($retVal), TRUE);
 
 // 检测返回值

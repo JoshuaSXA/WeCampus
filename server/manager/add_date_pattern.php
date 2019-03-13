@@ -1,11 +1,13 @@
 <?php
 
 
-include_once '../server/lib/DBController.php';
+include_once '../lib/DBController.php';
 
 $DBController = new DBController();
 
 $DBController->connDatabase();
+
+
 
 
 $patternModel = explode(",", $_REQUEST['pattern_model']);
@@ -19,7 +21,8 @@ if(count($patternModel) != count($patternSpan)) {
 }
 
 
-$multiSchedule = count($patternModel) == 2 ? TRUE : FALSE;
+
+$multiSchedule = count($patternModel) >= 2 ? TRUE : FALSE;
 
 global $routeID; global $stationID; global $startDate; global $weeks;
 

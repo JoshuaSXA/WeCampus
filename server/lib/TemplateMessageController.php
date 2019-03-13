@@ -38,7 +38,7 @@ class TemplateMessageController
 		$this->accessTokenController = new TokenController();
 
 		// 实例化curl对象
-		$this->curlRequestControllerObj = new CurlRequsetController();
+		$this->curlRequestControllerObj = new CurlRequestController();
 
 		// 变量赋值
 		$this->openID = $data['openid'];

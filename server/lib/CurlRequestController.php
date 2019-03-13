@@ -123,15 +123,16 @@ class CurlRequestController
 		// 获取文件内容
 		$fileContent = curl_exec($curl);
 
-		curl_close($curl);
+        $this->curlStatus = curl_errno($curl);
 
-		$this->curlStatus = curl_errno($curl);
+        curl_close($curl);
 
-		if($this->curlStatus) {
+        // 判断curl请求是否成功
+        if($this->curlStatus) {
 
-			return FALSE;
-			
-		} else {
+    		return FALSE;
+
+		}else{
 
 			$downloadFile = fopen($savePath, 'w');
 

@@ -1,5 +1,5 @@
 <?php
-include_once '../server/lib/DBController.php';
+include_once '../lib/DBController.php';
 
 $DBController = new DBController();
 
@@ -8,7 +8,8 @@ $DBController->connDatabase();
 
 $patternID = $_REQUEST['pattern_id'];
 
-$schedule = $_REQUEST['schedule'];
+$schedule = explode(",",$_REQUEST['schedule']);
+
 
 
 for($i = 0; $i < count($schedule); ++$i) {
@@ -21,10 +22,10 @@ for($i = 0; $i < count($schedule); ++$i) {
 
 	if($retVal) {
 
-		echo $i + " insertion succeeded!";
+		echo ($i . " " . $unitTime . " insertion succeeded!\n");
 
 	} else {
-		echo $i + " insertion failed!";
+		echo ($i . " " . $unitTime . " insertion failed!\n");
 	}
 
 }
