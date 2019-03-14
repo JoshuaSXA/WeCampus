@@ -2,7 +2,6 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="22916967-a950-4bef-9c78-fd7696f0182d" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/server/lib/GlobalVar.php" beforeDir="false" afterPath="$PROJECT_DIR$/server/lib/GlobalVar.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server/ticketing/class/TicketingController.php" beforeDir="false" afterPath="$PROJECT_DIR$/server/ticketing/class/TicketingController.php" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -16,7 +15,7 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/server/cardseeking/class/CardSeekingController.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="57">
+            <state relative-caret-position="776">
               <caret line="229" column="71" lean-forward="true" selection-start-line="229" selection-start-column="8" selection-end-line="229" selection-end-column="71" />
             </state>
           </provider>
@@ -25,8 +24,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/server/ticketing/class/TicketingController.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1699">
-              <caret line="299" lean-forward="true" selection-start-line="299" selection-end-line="299" />
+            <state relative-caret-position="384">
+              <caret line="437" column="19" lean-forward="true" selection-start-line="437" selection-start-column="19" selection-end-line="437" selection-end-column="19" />
             </state>
           </provider>
         </entry>
@@ -45,6 +44,15 @@
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="-48">
               <caret line="65" selection-start-line="65" selection-end-line="70" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/server/lib/UserInfoController.php">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="5663">
+              <caret line="456" selection-start-line="456" selection-end-line="456" />
             </state>
           </provider>
         </entry>
@@ -171,14 +179,7 @@
               <item name="WeCampus" type="b2602c69:ProjectViewProjectNode" />
               <item name="WeCampus" type="462c0819:PsiDirectoryNode" />
               <item name="server" type="462c0819:PsiDirectoryNode" />
-              <item name="ticketing" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="WeCampus" type="b2602c69:ProjectViewProjectNode" />
-              <item name="WeCampus" type="462c0819:PsiDirectoryNode" />
-              <item name="server" type="462c0819:PsiDirectoryNode" />
-              <item name="ticketing" type="462c0819:PsiDirectoryNode" />
-              <item name="class" type="462c0819:PsiDirectoryNode" />
+              <item name="lib" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
@@ -218,18 +219,18 @@
       <workItem from="1551575367782" duration="15707000" />
       <workItem from="1551969542552" duration="9015000" />
       <workItem from="1552204110482" duration="10110000" />
-      <workItem from="1552490737903" duration="9284000" />
+      <workItem from="1552490737903" duration="11343000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="71349000" />
+    <option name="totallyTimeSpent" value="73408000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="0" width="1440" height="900" extended-state="0" />
     <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.25679544" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.021459227" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
@@ -443,13 +444,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/server/lib/UserInfoController.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="4173">
-          <caret line="456" selection-start-line="456" selection-end-line="456" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/server/api/get_nearest_school.php">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
@@ -554,17 +548,31 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/server/lib/UserInfoController.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="5663">
+          <caret line="456" selection-start-line="456" selection-end-line="456" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/server/cardseeking/class/CardSeekingController.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="57">
+        <state relative-caret-position="776">
           <caret line="229" column="71" lean-forward="true" selection-start-line="229" selection-start-column="8" selection-end-line="229" selection-end-column="71" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar://$APPLICATION_HOME_DIR$/plugins/php/lib/php.jar!/stubs/Core/Core_d.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="267">
+          <caret line="297" column="9" selection-start-line="297" selection-start-column="9" selection-end-line="297" selection-end-column="9" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/server/ticketing/class/TicketingController.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1699">
-          <caret line="299" lean-forward="true" selection-start-line="299" selection-end-line="299" />
+        <state relative-caret-position="384">
+          <caret line="437" column="19" lean-forward="true" selection-start-line="437" selection-start-column="19" selection-end-line="437" selection-end-column="19" />
         </state>
       </provider>
     </entry>

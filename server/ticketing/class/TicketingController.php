@@ -345,10 +345,109 @@ class TicketingController
     }
 
 
+    private function checkCancelTicketStatus($scheduleID) {
+
+        $sql = "SELECT COUNT(*) AS num FROM ticket_schedule WHERE schedule_id = (?) AND (NOW() BETWEEN sell_start_time AND ticket_cancel_time)";
+
+        // 创建预处理语句
+        $stmt = mysqli_stmt_init($this->DBController->getConnObject());
+
+        if(mysqli_stmt_prepare($stmt, $sql)){
+
+            // 绑定参数
+            mysqli_stmt_bind_param($stmt, "i", $scheduleID);
+
+            // 执行查询
+            if(!mysqli_stmt_execute($stmt)) {
+
+                return array("success" => FALSE, "time_exceeded" => FALSE);
+
+            }
+
+            // 获取查询结果
+            $result = mysqli_stmt_get_result($stmt);
+
+            // 获取值
+            $retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);
+
+            // 返回结果
+            if($retValue[0]['num'] == 0) {
+
+                return array("success" => TRUE, "time_exceeded" => FALSE);
+
+            } else {
+
+                return array("success" => TRUE, "time_exceeded" => TRUE);
+
+            }
+
+            // 释放结果
+            mysqli_stmt_free_result($stmt);
+
+            // 关闭mysqli_stmt类
+            mysqli_stmt_close($stmt);
+
+        } else {
+
+            return array("success" => FALSE, "time_exceeded" => FALSE);
+
+        }
+
+
+    }
+
+
     // 取消订票的接口、oid和班次id
     public function cancelTripTicket() {
 
+        $scheduleID = $_REQUEST['schedule_id'];
 
+        $checkRes = $this->checkCancelTicketStatus($scheduleID);
+
+        if(!$checkRes['success']) {
+            echo json_encode(array("success" => FALSE, "time_exceeded" => FALSE));
+            return;
+        }
+
+        if($checkRes['time_exceeded']) {
+            echo json_encode(array("success" => FALSE, "time_exceeded" => TRUE));
+            return;
+        }
+
+        $sql = "UPDATE ticket_case SET status = 2 WHERE open_id = (?) AND status = 0";
+
+        $stmt = mysqli_stmt_init($this->DBController->getConnObject());
+
+        if(mysqli_stmt_prepare($stmt, $sql)){
+
+            // 绑定参数
+            mysqli_stmt_bind_param($stmt, "s", $this->openID);
+
+            // 执行查询
+            if(!mysqli_stmt_execute($stmt)){
+
+                // 查询失败
+                echo array("success" => FALSE, "time_exceeded" => FALSE);
+                return;
+
+            }
+
+            // 查询成功，返回结果
+            echo array("success" => TRUE, "time_exceeded" => FALSE);
+
+            // 释放结果
+            mysqli_stmt_free_result($stmt);
+
+            // 关闭mysqli_stmt类
+            mysqli_stmt_close($stmt);
+
+        } else {
+
+            //echo $this->DBController->getErrorCode();
+
+            echo array("success" => FALSE, "time_exceeded" => FALSE);
+
+        }
 
     }
 
