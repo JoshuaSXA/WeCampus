@@ -86,4 +86,35 @@ class RouteController
             echo json_encode(array("success" => FALSE));
         }
     }
+
+    //修改路线信息
+    public function updateRoute(){
+        $routeID = $_REQUEST['route_id'];
+        $schoolID = $_REQUEST['school_id'];
+        $routeName = $_REQUEST['routeName'];
+        $startStation = $_REQUEST['start_station'];
+        $endStation = $_REQUEST['end_station'];
+
+        $sql = "UPDATE route SET school_id = (?),route_name = (?),start_station = (?),end_station = (?) WHERE route_id = (?)";
+
+        $stmt = mysqli_stmt_init($this->DBController->getConnObject());
+        if(mysqli_stmt_prepare($stmt, $sql)){
+            // 绑定参数
+            mysqli_stmt_bind_param($stmt, "isiii",$schoolID, $routeName, $startStation, $endStation,$routeID);
+            // 执行查询
+            if(!mysqli_stmt_execute($stmt)){
+                // 查询失败
+                echo json_encode(array("success" => FALSE));
+                return;
+            }
+            // 查询成功，返回结果
+            echo json_encode(array("success" => TRUE));
+            // 释放结果
+            mysqli_stmt_free_result($stmt);
+            // 关闭mysqli_stmt类
+            mysqli_stmt_close($stmt);
+        } else {
+            echo json_encode(array("success" => FALSE));
+        }
+    }
 }

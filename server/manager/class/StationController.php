@@ -27,7 +27,7 @@ class StationController
         $this->DBController->disConnDatabase();
     }
 
-    //添加停站信息
+    //添加站台信息
     public function addStation(){
         $schoolID = $_REQUEST['school_id'];
         $stationName = $_REQUEST['station_name'];
@@ -58,7 +58,7 @@ class StationController
         }
     }
 
-    //删除停站信息
+    //删除站台信息
     public function deleteStation(){
         $stationID = $_REQUEST['station_id'];
 
@@ -68,6 +68,38 @@ class StationController
         if(mysqli_stmt_prepare($stmt, $sql)){
             // 绑定参数
             mysqli_stmt_bind_param($stmt, "i",$stationID);
+            // 执行查询
+            if(!mysqli_stmt_execute($stmt)){
+                // 查询失败
+                echo json_encode(array("success" => FALSE));
+                return;
+            }
+            // 查询成功，返回结果
+            echo json_encode(array("success" => TRUE));
+            // 释放结果
+            mysqli_stmt_free_result($stmt);
+            // 关闭mysqli_stmt类
+            mysqli_stmt_close($stmt);
+        } else {
+            //echo $this->DBController->getErrorCode();
+            echo json_encode(array("success" => FALSE));
+        }
+    }
+
+    //修改站台信息
+    public function updateStation(){
+        $stationID = $_REQUEST['station_id'];
+        $schoolID = $_REQUEST['school_id'];
+        $stationName = $_REQUEST['station_name'];
+        $longitude = $_REQUEST['longitude'];
+        $latitude = $_REQUEST['latitude'];
+
+        $sql = "UPDATE station SET school_id = (?),station_id = (?), station_name = (?), longitude = (?), latitude = (?) WHERE station_id = (?)";
+
+        $stmt = mysqli_stmt_init($this->DBController->getConnObject());
+        if(mysqli_stmt_prepare($stmt, $sql)){
+            // 绑定参数
+            mysqli_stmt_bind_param($stmt, "isiii",$schoolID, $stationName, $longitude, $latitude, $stationID);
             // 执行查询
             if(!mysqli_stmt_execute($stmt)){
                 // 查询失败
