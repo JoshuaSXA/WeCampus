@@ -739,7 +739,7 @@ class CarPoolingController {
             $retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);
 
             // 返回结果
-            if($retValue[0]['num'] == 0) {
+            if($retValue[0]['num'] == 0) {F
 
                 return array("success" => TRUE, "quit" => FALSE);
 
