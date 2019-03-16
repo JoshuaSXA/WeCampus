@@ -58,7 +58,7 @@ class TicketingController
     // 获取当前用户即将出行的行程数量、历史数量、违规的数量
     public function getUserTripNumber() {
 
-        $sql = "SELECT (SELECT COUNT(*) FROM s WHERE NOW() < s.start_time AND s.open_id=(?)) AS trip_num, (SELECT COUNT(*) FROM s WHERE NOW() >= s.start_time AND s.open_id=(?)) AS history_num, (SELECT COUNT(*) FROM s WHERE NOW() > s.ticket_check_time AND s.status = 0 AND s.open_id=(?)) AS violate_num FROM (ticket_case NATURAL JOIN ticket_schedule) s";
+        $sql = "SELECT (SELECT COUNT(*) FROM ticket_case a NATURAL JOIN ticket_schedule b WHERE NOW() < b.start_time AND a.open_id=(?)) AS trip_num, (SELECT COUNT(*) FROM ticket_case c NATURAL JOIN ticket_schedule d WHERE NOW() >= d.start_time AND c.open_id=(?)) AS history_num, (SELECT COUNT(*) FROM ticket_case e NATURAL JOIN ticket_schedule f WHERE NOW() > f.ticket_check_time AND e.status = 0 AND e.open_id=(?)) AS violate_num";
 
         // 创建预处理语句
         $stmt = mysqli_stmt_init($this->DBController->getConnObject());
@@ -91,8 +91,8 @@ class TicketingController
             mysqli_stmt_close($stmt);
 
         } else {
-
-            echo json_encode(array("success" => FALSE, "data" => array()));
+            echo $this->DBController->getErrorCode();
+            //echo json_encode(array("success" => FALSE, "data" => array()));
 
         }
 
@@ -101,15 +101,104 @@ class TicketingController
 
     // 对于一个学校来说，获取车的种类，包括线路名、起点终点、备注
     public function getBusRouteList() {
+        $sql = "SELECT ticket_id,ticket_name, start_place, end_place, tip FROM school_ticket WHERE school_id = (?)";
 
+        $stmt = mysqli_stmt_init($this->DBController->getConnObject());
+
+        if(mysqli_stmt_prepare($stmt, $sql)){
+            // 绑定参数
+            mysqli_stmt_bind_param($stmt, "i", $this->schoolID);
+            // 执行查询
+            if(!mysqli_stmt_execute($stmt)) {
+                echo json_encode(array("success" => FALSE, "detail" => array()));
+                return;
+            }
+            // 获取查询结果
+            $result = mysqli_stmt_get_result($stmt);
+            // 获取值
+            $retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);
+            // 返回结果
+            echo json_encode(array("success" => TRUE, "detail" => $retValue), JSON_UNESCAPED_UNICODE);
+            // 释放结果
+            mysqli_stmt_free_result($stmt);
+            // 关闭mysqli_stmt类
+            mysqli_stmt_close($stmt);
+        } else {
+            echo json_encode(array("success" => FALSE, "detail" => array()));
+        }
 
 
     }
 
 
+    private function getBusTripInfo($ticket_id) {
+        $sql = "SELECT ticket_name, start_place, end_place, tip FROM school_ticket WHERE ticket_id = (?)";
+
+        $stmt = mysqli_stmt_init($this->DBController->getConnObject());
+
+        if(mysqli_stmt_prepare($stmt, $sql)){
+            // 绑定参数
+            mysqli_stmt_bind_param($stmt, "i", $ticket_id);
+            // 执行查询
+            if(!mysqli_stmt_execute($stmt)) {
+                return array("success" => FALSE, "detail" => array());
+            }
+            // 获取查询结果
+            $result = mysqli_stmt_get_result($stmt);
+            // 获取值
+            $retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);
+            // 返回结果
+            return array("success" => TRUE, "detail" => $retValue[0]);
+            // 释放结果
+            mysqli_stmt_free_result($stmt);
+            // 关闭mysqli_stmt类
+            mysqli_stmt_close($stmt);
+        } else {
+            return array("success" => FALSE, "detail" => array());
+        }
+    }
+
     // 给定车的ID，把第二个接口的内容加上班次列表（开票时间、结票时间、剩余票数）
     public function getBusTripList() {
+        $ticketID = $_GET['ticket_id'];
 
+        $sql = "SELECT schedule_id, sell_start_time ,sell_end_time , left_ticket_num, start_time FROM ticket_schedule WHERE ticket_id = (?) AND (NOW() BETWEEN ticket_show_time AND ticket_hide_time)";
+
+        $busTripInfoRes = $this->getBusTripInfo($ticketID);
+
+        if(!$busTripInfoRes['success']) {
+            echo json_encode(array("success" => FALSE, "data" => array()));
+            return;
+        }
+
+        $busTripInfo = $busTripInfoRes['detail'];
+
+        $stmt = mysqli_stmt_init($this->DBController->getConnObject());
+
+        if(mysqli_stmt_prepare($stmt, $sql)){
+            // 绑定参数
+            mysqli_stmt_bind_param($stmt, "i", $ticketID);
+            // 执行查询
+            if(!mysqli_stmt_execute($stmt)) {
+                echo json_encode(array("success" => FALSE, "data" => array()));
+                return;
+            }
+            // 获取查询结果
+            $result = mysqli_stmt_get_result($stmt);
+            // 获取值
+            $retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);
+            // 返回结果
+
+            $busTripInfo['schedule'] = $retValue;
+
+            echo json_encode(array("success" => TRUE, "data" => $busTripInfo), JSON_UNESCAPED_UNICODE);
+            // 释放结果
+            mysqli_stmt_free_result($stmt);
+            // 关闭mysqli_stmt类
+            mysqli_stmt_close($stmt);
+        } else {
+            echo json_encode(array("success" => FALSE, "data" => array()));
+        }
 
     }
 
@@ -119,8 +208,7 @@ class TicketingController
 
         $scheduleID = $_GET['schedule_id'];
 
-        $sql = "SELECT b.schedule_id, a.ticket_name, a.start_place, a.end_place, b.start_time, b.sell_start_time, b.sell_end_time, b.ticket_cancel_time, b.left_ticket_num, EXISTS(SELECT * FROM ticket_case s WHERE s.schedule_id = b.schedule_id AND s.open_id = (?)) AS participate FROM school_ticket a NATURAL JOIN ticket_schedule b WHERE b.schedule_id = (?)";
-
+        $sql = "SELECT b.schedule_id, a.ticket_name, a.start_place, a.end_place, a.tip, b.start_time, b.sell_start_time, b.sell_end_time, b.ticket_cancel_time, b.left_ticket_num, CASE EXISTS(SELECT * FROM ticket_case s WHERE s.schedule_id = b.schedule_id AND s.open_id = (?)) WHEN 0 THEN -1 ELSE (SELECT k.status FROM ticket_case k WHERE k.schedule_id = (?) AND k.open_id = (?)) END AS status FROM school_ticket a NATURAL JOIN ticket_schedule b WHERE b.schedule_id = (?)";
 
         // 创建预处理语句
         $stmt = mysqli_stmt_init($this->DBController->getConnObject());
@@ -128,7 +216,7 @@ class TicketingController
         if(mysqli_stmt_prepare($stmt, $sql)){
 
             // 绑定参数
-            mysqli_stmt_bind_param($stmt, "si", $this->openID, $scheduleID);
+            mysqli_stmt_bind_param($stmt, "sisi", $this->openID, $scheduleID, $this->openID, $scheduleID);
 
             // 执行查询
             if(!mysqli_stmt_execute($stmt)) {
@@ -153,18 +241,78 @@ class TicketingController
             mysqli_stmt_close($stmt);
 
         } else {
-
-            echo json_encode(array("success" => FALSE, "detail" => array()));
+            echo $this->DBController->getErrorCode();
+            //echo json_encode(array("success" => FALSE, "detail" => array()));
 
         }
 
     }
 
 
+    private function checkOrderTicketStatus($scheduleID) {
+        $sql = "SELECT COUNT(*) AS num FROM ticket_schedule WHERE schedule_id = (?) AND (NOW() BETWEEN sell_start_time AND sell_end_time)";
+        // 创建预处理语句
+        $stmt = mysqli_stmt_init($this->DBController->getConnObject());
+        if(mysqli_stmt_prepare($stmt, $sql)){
+            // 绑定参数
+            mysqli_stmt_bind_param($stmt, "i", $scheduleID);
+            // 执行查询
+            if(!mysqli_stmt_execute($stmt)) {
+                return array("success" => FALSE, "time_exceeded" => FALSE);
+            }
+            // 获取查询结果
+            $result = mysqli_stmt_get_result($stmt);
+            // 获取值
+            $retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);
+            // 返回结果
+            if($retValue[0]['num'] == 0) {
+                return array("success" => TRUE, "time_exceeded" => FALSE);
+            } else {
+                return array("success" => TRUE, "time_exceeded" => TRUE);
+            }
+            // 释放结果
+            mysqli_stmt_free_result($stmt);
+            // 关闭mysqli_stmt类
+            mysqli_stmt_close($stmt);
+        } else {
+            return array("success" => FALSE, "time_exceeded" => FALSE);
+        }
+    }
+
+
     // 班次id、openid———>订票（惩罚）
     public function orderTripTicket() {
-
-
+        $scheduleID = $_REQUEST['schedule_id'];
+        $checkRes = $this->checkOrderTicketStatus($scheduleID);
+        if(!$checkRes['success']) {
+            echo json_encode(array("success" => FALSE,"time_exceed" => FALSE));
+            return;
+        }
+        if($checkRes['time_exceeded']) {
+            echo json_encode(array("success" => FALSE,"time_exceed" => TRUE));
+            return;
+        }
+        $sql = "INSERT INTO ticket_case (schedule_id, open_id, order_time, check_time) VALUES ((?),(?),NOW(),0)";
+        $stmt = mysqli_stmt_init($this->DBController->getConnObject());
+        if(mysqli_stmt_prepare($stmt, $sql)){
+            // 绑定参数
+            mysqli_stmt_bind_param($stmt, "is",$scheduleID, $this->openID);
+            // 执行查询
+            if(!mysqli_stmt_execute($stmt)){
+                // 查询失败
+                echo json_encode(array("success" => FALSE, "time_exceeded" => FALSE));
+                return;
+            }
+            // 查询成功，返回结果
+            echo json_encode(array("success" => TRUE, "time_exceeded" => FALSE));
+            // 释放结果
+            mysqli_stmt_free_result($stmt);
+            // 关闭mysqli_stmt类
+            mysqli_stmt_close($stmt);
+        } else {
+            //echo $this->DBController->getErrorCode();
+            echo json_encode(array("success" => FALSE, "time_exceeded" => FALSE));
+        }
 
     }
 
@@ -223,7 +371,7 @@ class TicketingController
     public function verifyTripTicket() {
 
         $qrMessage = $_REQUEST['qr_msg'];
-        
+
         // 持票者主扫是0, 被扫是1
         $checkerIdentity = (int)$_REQUEST['checker'];
 
@@ -304,7 +452,7 @@ class TicketingController
 
         $pageBorder = $_GET['page_border'];
 
-        $sql = "SELECT ticket_id, schedule_id, ticket_name, start_place, end_place, start_time, status FROM school_ticket NATURAL JOIN ticket_schedule NATURAL JOIN ticket_case WHERE open_id=(?) AND start_time > (?) ORDER BY start_time DESC LIMIT 10";
+        $sql = "SELECT ticket_id, schedule_id, ticket_name, start_place, end_place, ticket_check_time, start_time, status FROM school_ticket NATURAL JOIN ticket_schedule NATURAL JOIN ticket_case WHERE open_id=(?) AND start_time < (?) ORDER BY start_time DESC LIMIT 10";
 
         // 创建预处理语句
         $stmt = mysqli_stmt_init($this->DBController->getConnObject());
@@ -344,109 +492,69 @@ class TicketingController
 
     }
 
-
     private function checkCancelTicketStatus($scheduleID) {
-
         $sql = "SELECT COUNT(*) AS num FROM ticket_schedule WHERE schedule_id = (?) AND (NOW() BETWEEN sell_start_time AND ticket_cancel_time)";
-
         // 创建预处理语句
         $stmt = mysqli_stmt_init($this->DBController->getConnObject());
-
         if(mysqli_stmt_prepare($stmt, $sql)){
-
             // 绑定参数
             mysqli_stmt_bind_param($stmt, "i", $scheduleID);
-
             // 执行查询
             if(!mysqli_stmt_execute($stmt)) {
-
                 return array("success" => FALSE, "time_exceeded" => FALSE);
-
             }
-
             // 获取查询结果
             $result = mysqli_stmt_get_result($stmt);
-
             // 获取值
             $retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);
-
             // 返回结果
             if($retValue[0]['num'] == 0) {
-
                 return array("success" => TRUE, "time_exceeded" => FALSE);
-
             } else {
-
                 return array("success" => TRUE, "time_exceeded" => TRUE);
-
             }
-
             // 释放结果
             mysqli_stmt_free_result($stmt);
-
             // 关闭mysqli_stmt类
             mysqli_stmt_close($stmt);
-
         } else {
-
             return array("success" => FALSE, "time_exceeded" => FALSE);
-
         }
-
-
     }
 
 
     // 取消订票的接口、oid和班次id
     public function cancelTripTicket() {
-
         $scheduleID = $_REQUEST['schedule_id'];
-
         $checkRes = $this->checkCancelTicketStatus($scheduleID);
-
         if(!$checkRes['success']) {
             echo json_encode(array("success" => FALSE, "time_exceeded" => FALSE));
             return;
         }
-
         if($checkRes['time_exceeded']) {
             echo json_encode(array("success" => FALSE, "time_exceeded" => TRUE));
             return;
         }
-
         $sql = "UPDATE ticket_case SET status = 2 WHERE open_id = (?) AND status = 0";
-
         $stmt = mysqli_stmt_init($this->DBController->getConnObject());
-
         if(mysqli_stmt_prepare($stmt, $sql)){
-
             // 绑定参数
             mysqli_stmt_bind_param($stmt, "s", $this->openID);
-
             // 执行查询
             if(!mysqli_stmt_execute($stmt)){
-
                 // 查询失败
                 echo array("success" => FALSE, "time_exceeded" => FALSE);
                 return;
-
             }
-
             // 查询成功，返回结果
-            echo array("success" => TRUE, "time_exceeded" => FALSE);
-
+            echo json_encode(array("success" => TRUE, "time_exceeded" => FALSE));
             // 释放结果
             mysqli_stmt_free_result($stmt);
-
             // 关闭mysqli_stmt类
             mysqli_stmt_close($stmt);
-
         } else {
-
             //echo $this->DBController->getErrorCode();
-
-            echo array("success" => FALSE, "time_exceeded" => FALSE);
-
+            echo json_encode(array("success" => FALSE, "time_exceeded" => FALSE));
         }
 
     }
