@@ -5,7 +5,7 @@
  * Date: 2019/3/16
  * Time: 17:10
  */
-include_once '../manager/class/RouteController.php';
+include_once '../class/RouteController.php';
 
 // 实例化RouteController类
 $routeControllerObj = new RouteController();

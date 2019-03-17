@@ -5,7 +5,7 @@
  * Date: 2019/3/17
  * Time: 13:56
  */
-include_once '../manager/class/StopController.php';
+include_once '../class/StopController.php';
 
 // 实例化RouteController类
 $stopControllerObj = new StopController();

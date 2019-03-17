@@ -5,7 +5,7 @@
  * Date: 2019/3/17
  * Time: 13:54
  */
-include_once '../manager/class/StationController.php';
+include_once '../class/StationController.php';
 
 // 实例化RouteController类
 $stationControllerObj = new StationController();
