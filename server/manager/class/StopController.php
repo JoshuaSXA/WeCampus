@@ -7,6 +7,9 @@
  */
 include_once '../../lib/DBController.php';
 include_once '../../lib/GlobalVar.php';
+header('Access-Control-Allow-Origin:*');
+header('Access-Control-Allow-Methods:OPTIONS, GET, POST');
+header('Access-Control-Allow-Headers:x-requested-with,content-type');
 
 class StopController
 {
@@ -29,6 +32,13 @@ class StopController
 
     //添加停站信息
     public function addStop(){
+        $postData = file_get_contents('php://input');
+        $stringItems = explode('&', $postData);
+        $requests = array();
+        for($i = 0; $i < count($stringItems); ++$i) {
+            $pair = explode('=', $stringItems[$i]);
+            $requests[$pair[0]] = $pair[1];
+        }
         $stationID = $_REQUEST['station_id'];
         $routeID = $_REQUEST['route_id'];
         $stopName = $_REQUEST['stop_name'];
@@ -62,6 +72,13 @@ class StopController
 
     //删除停站信息
     public function deleteStop(){
+        $postData = file_get_contents('php://input');
+        $stringItems = explode('&', $postData);
+        $requests = array();
+        for($i = 0; $i < count($stringItems); ++$i) {
+            $pair = explode('=', $stringItems[$i]);
+            $requests[$pair[0]] = $pair[1];
+        }
         $stationID = $_REQUEST['station_id'];
         $routeID = $_REQUEST['route_id'];
 
@@ -91,6 +108,13 @@ class StopController
 
     //修改停站信息
     public function updateStop(){
+        $postData = file_get_contents('php://input');
+        $stringItems = explode('&', $postData);
+        $requests = array();
+        for($i = 0; $i < count($stringItems); ++$i) {
+            $pair = explode('=', $stringItems[$i]);
+            $requests[$pair[0]] = $pair[1];
+        }
         $stationID = $_REQUEST['station_id'];
         $routeID = $_REQUEST['route_id'];
         $stopName = $_REQUEST['stop_name'];

@@ -7,6 +7,9 @@
  */
 include_once '../../lib/DBController.php';
 include_once '../../lib/GlobalVar.php';
+header('Access-Control-Allow-Origin:*');
+header('Access-Control-Allow-Methods:OPTIONS, GET, POST');
+header('Access-Control-Allow-Headers:x-requested-with,content-type');
 
 
 class RouteController
@@ -30,10 +33,17 @@ class RouteController
 
     //添加信息
     public function addRoute(){
-        $schoolID = $_REQUEST['school_id'];
-        $routeName = $_REQUEST['routeName'];
-        $startStation = $_REQUEST['start_station'];
-        $endStation = $_REQUEST['end_station'];
+        $postData = file_get_contents('php://input');
+        $stringItems = explode('&', $postData);
+        $requests = array();
+        for($i = 0; $i < count($stringItems); ++$i) {
+            $pair = explode('=', $stringItems[$i]);
+            $requests[$pair[0]] = $pair[1];
+        }
+        $schoolID = $requests['school_id'];
+        $routeName = $requests['routeName'];
+        $startStation = $requests['start_station'];
+        $endStation = $requests['end_station'];
 
         $sql = "INSERT INTO route (school_id, route_name, start_station, end_station) VALUES ((?),(?),(?),(?))";
 
@@ -61,7 +71,14 @@ class RouteController
 
     //删除信息
     public function deleteRoute(){
-        $routeID = $_REQUEST['route_id'];
+        $postData = file_get_contents('php://input');
+        $stringItems = explode('&', $postData);
+        $requests = array();
+        for($i = 0; $i < count($stringItems); ++$i) {
+            $pair = explode('=', $stringItems[$i]);
+            $requests[$pair[0]] = $pair[1];
+        }
+        $routeID = $requests['route_id'];
 
         $sql = "DELETE FROM route WHERE route_id = (?)";
 
@@ -89,11 +106,18 @@ class RouteController
 
     //修改路线信息
     public function updateRoute(){
-        $routeID = $_REQUEST['route_id'];
-        $schoolID = $_REQUEST['school_id'];
-        $routeName = $_REQUEST['routeName'];
-        $startStation = $_REQUEST['start_station'];
-        $endStation = $_REQUEST['end_station'];
+        $postData = file_get_contents('php://input');
+        $stringItems = explode('&', $postData);
+        $requests = array();
+        for($i = 0; $i < count($stringItems); ++$i) {
+            $pair = explode('=', $stringItems[$i]);
+            $requests[$pair[0]] = $pair[1];
+        }
+        $routeID = $requests['route_id'];
+        $schoolID = $requests['school_id'];
+        $routeName = $requests['routeName'];
+        $startStation = $requests['start_station'];
+        $endStation = $requests['end_station'];
 
         $sql = "UPDATE route SET school_id = (?),route_name = (?),start_station = (?),end_station = (?) WHERE route_id = (?)";
 

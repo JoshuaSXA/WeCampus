@@ -7,6 +7,9 @@
  */
 include_once '../../lib/DBController.php';
 include_once '../../lib/GlobalVar.php';
+header('Access-Control-Allow-Origin:*');
+header('Access-Control-Allow-Methods:OPTIONS, GET, POST');
+header('Access-Control-Allow-Headers:x-requested-with,content-type');
 
 class StationController
 {
@@ -29,10 +32,17 @@ class StationController
 
     //添加站台信息
     public function addStation(){
-        $schoolID = $_REQUEST['school_id'];
-        $stationName = $_REQUEST['station_name'];
-        $longitude = $_REQUEST['longitude'];
-        $latitude = $_REQUEST['latitude'];
+        $postData = file_get_contents('php://input');
+        $stringItems = explode('&', $postData);
+        $requests = array();
+        for($i = 0; $i < count($stringItems); ++$i) {
+            $pair = explode('=', $stringItems[$i]);
+            $requests[$pair[0]] = $pair[1];
+        }
+        $schoolID = $requests['school_id'];
+        $stationName = $requests['station_name'];
+        $longitude = $requests['longitude'];
+        $latitude = $requests['latitude'];
 
         $sql = "INSERT INTO station(school_id, station_name,longitude, latitude) VALUES ((?),(?),(?),(?))";
 
@@ -60,7 +70,14 @@ class StationController
 
     //删除站台信息
     public function deleteStation(){
-        $stationID = $_REQUEST['station_id'];
+        $postData = file_get_contents('php://input');
+        $stringItems = explode('&', $postData);
+        $requests = array();
+        for($i = 0; $i < count($stringItems); ++$i) {
+            $pair = explode('=', $stringItems[$i]);
+            $requests[$pair[0]] = $pair[1];
+        }
+        $stationID = $requests['station_id'];
 
         $sql = "DELETE FROM station WHERE station_id = (?)";
 
@@ -88,11 +105,18 @@ class StationController
 
     //修改站台信息
     public function updateStation(){
-        $stationID = $_REQUEST['station_id'];
-        $schoolID = $_REQUEST['school_id'];
-        $stationName = $_REQUEST['station_name'];
-        $longitude = $_REQUEST['longitude'];
-        $latitude = $_REQUEST['latitude'];
+        $postData = file_get_contents('php://input');
+        $stringItems = explode('&', $postData);
+        $requests = array();
+        for($i = 0; $i < count($stringItems); ++$i) {
+            $pair = explode('=', $stringItems[$i]);
+            $requests[$pair[0]] = $pair[1];
+        }
+        $stationID = $requests['station_id'];
+        $schoolID = $requests['school_id'];
+        $stationName = $requests['station_name'];
+        $longitude = $requests['longitude'];
+        $latitude = $requests['latitude'];
 
         $sql = "UPDATE station SET school_id = (?),station_id = (?), station_name = (?), longitude = (?), latitude = (?) WHERE station_id = (?)";
 
