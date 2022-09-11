@@ -52,13 +52,24 @@ $echoArray = array(
 );
 
 $devArray=  array(
+    array(
         'title' => "课咋样",
         'icon' => '../../../lib/moduleIcon/course.png',
         'backgroundColor' => "#0AB76D",
-        'url' => '../../../pages/courseEvaluation/index/index'
-    );
+        'url' => '../../../pages/courseEvaluation/index/index',
+        'loginRequest' => TRUE,
+    ),
+    array(
+        'title' => "票子有伐",
+        'icon' => '../../../lib/moduleIcon/ticket.png',
+        'backgroundColor' => "#007DBA",
+        'url' => '../../../pages/busTicket/index/index',
+        'loginRequest' => TRUE,
+    )
+);
 
 $statusCode = '';
+$schoolID;
 
 if(array_key_exists('code', $_GET)) {
 
@@ -66,10 +77,22 @@ if(array_key_exists('code', $_GET)) {
 
 }
 
+if(array_key_exists('school_id', $_GET)) {
+
+    $schoolID = $_GET['school_id'];
+
+}
+
+// if($schoolID == 1) {
+
+// } else if($schoolID == 2) {
+
+// }
+
 if($statusCode == '20190310001') {
 
     //echo json_encode(array($echoArray[4]), JSON_UNESCAPED_UNICODE);
-    echo json_encode(array($devArray), JSON_UNESCAPED_UNICODE);
+    echo json_encode($devArray, JSON_UNESCAPED_UNICODE);
 
 } else {
 

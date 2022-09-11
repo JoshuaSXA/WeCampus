@@ -6,9 +6,9 @@
 class DBController
 {
 	private $serverName = '127.0.0.1';
-	private $userName = 'root';
-	private $password = 'lwy5721096';
-	private $mysqlDatabase = 'campus';
+	private $userName = 'admin';
+	private $password = 'WeCampus1234';
+	private $mysqlDatabase = 'wecampus';
 	private $dbConnection = null;
 
 	function __construct()

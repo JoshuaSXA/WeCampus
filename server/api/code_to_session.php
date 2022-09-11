@@ -22,54 +22,57 @@ $retVal = json_decode(json_encode($retVal), TRUE);
 // 检测返回值
 if($retVal && array_key_exists('openid', $retVal)) {
 
-	// 获取openid
-	$openID = $retVal['openid'];
+    // 获取openid
+    $openID = $retVal['openid'];
 
-	// 创建数据库接口类 DBController
-	$DBController = new DBController();
-	// 连接数据库
-	$DBController->connDatabase();
+    // 创建数据库接口类 DBController
+    $DBController = new DBController();
+    // 连接数据库
+    $DBController->connDatabase();
 
-	// 查询该openid对应的用户是否已经注册
-	$sql = "SELECT school_id FROM user WHERE open_id = (?)";
+    // 查询该openid对应的用户是否已经注册
+    $sql = "SELECT a.school_id, (SELECT b.ad_id FROM school b WHERE b.school_id = a.school_id) AS ad_id FROM user a WHERE a.open_id = (?)";
 
-	// 创建预处理语句
-	$stmt = mysqli_stmt_init($DBController->getConnObject());
+    // 创建预处理语句
+    $stmt = mysqli_stmt_init($DBController->getConnObject());
 
     if(mysqli_stmt_prepare($stmt, $sql)){
 
-		// 绑定参数
-		mysqli_stmt_bind_param($stmt, "s", $openID); 
+        // 绑定参数
+        mysqli_stmt_bind_param($stmt, "s", $openID);
 
-		// 执行查询
-		mysqli_stmt_execute($stmt);
+        // 执行查询
+        mysqli_stmt_execute($stmt);
 
-		// 获取查询结果
-		$result = mysqli_stmt_get_result($stmt);  
+        // 获取查询结果
+        $result = mysqli_stmt_get_result($stmt);
 
-		// 获取值
-		$retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC); 
+        // 获取值
+        $retValue =  mysqli_fetch_all($result, MYSQLI_ASSOC);
 
-		echo json_encode(array('success' => TRUE, 'openid' => $retVal['openid'], 'school_id' => count($retValue) == 0 ? 0 : $retValue[0]['school_id']));
+        echo json_encode(array('success' => TRUE,
+            'openid' => $retVal['openid'],
+            'school_id' => count($retValue) == 0 ? 0 : $retValue[0]['school_id'],
+            'ad_id' => count($retValue) == 0 ? 0 : $retValue[0]['ad_id']));
 
-		// 释放结果
-		mysqli_stmt_free_result($stmt);
+        // 释放结果
+        mysqli_stmt_free_result($stmt);
 
-		// 关闭mysqli_stmt类
-		mysqli_stmt_close($stmt);
-			
+        // 关闭mysqli_stmt类
+        mysqli_stmt_close($stmt);
+
     } else {
 
         echo json_encode(array("success" => FALSE));
-        	
-    }	
 
-	// 断开与数据库的连接
-	$DBController->disConnDatabase();	
+    }
+
+    // 断开与数据库的连接
+    $DBController->disConnDatabase();
 
 } else {
 
-	echo json_encode(array('success' => FALSE));
+    echo json_encode(array('success' => FALSE));
 
 }
 
